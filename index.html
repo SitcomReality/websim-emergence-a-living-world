@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergence - A Living World</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .world-view {
+            flex: 1;
+            position: relative;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            border-radius: 20px;
+            margin: 20px 20px 20px 0;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .world-canvas {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #a8e6cf 0%, #dcedc8 50%, #f8bbd9 100%);
+            position: relative;
+        }
+
+        .entity {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .entity:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .entity.farmer { background: #4CAF50; }
+        .entity.trader { background: #FF9800; }
+        .entity.crafter { background: #9C27B0; }
+        .entity.explorer { background: #2196F3; }
+
+        .resource-node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .resource-node.food { background: #8BC34A; }
+        .resource-node.wood { background: #795548; }
+        .resource-node.stone { background: #607D8B; }
+        .resource-node.water { background: #03A9F4; }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-panel h3 {
+            margin-bottom: 10px;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .info-panel p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .relationship-line {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+
+        .relationship-line.friendship { stroke: #4CAF50; }
+        .relationship-line.rivalry { stroke: #F44336; }
+        .relationship-line.trade { stroke: #FF9800; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .entity.active {
+            animation: pulse 1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="world-view">
+            <div class="world-canvas" id="worldCanvas">
+                <svg id="relationshipSvg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                </svg>
+            </div>
+        </div>
+        <div class="sidebar">
+            <h2 style="margin-bottom: 20px; color: #fff;">Emergence</h2>
+            
+            <div class="controls">
+                <button class="btn active" id="playBtn">⏸️</button>
+                <button class="btn" id="speedBtn">1x</button>
+                <button class="btn" id="resetBtn">Reset</button>
+            </div>
+
+            <div class="info-panel">
+                <h3>World Stats</h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div style="font-weight: bold;" id="entityCount">0</div>
+                        <div style="color: rgba(255,255,255,0.7);">Entities</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-weight: bold;" id="cycleCount">0</div>
+                        <div style="color: rgba(255,255,255,0.7);">Cycles</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-weight: bold;" id="relationshipCount">0</div>
+                        <div style="color: rgba(255,255,255,0.7);">Relationships</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-weight: bold;" id="tradeCount">0</div>
+                        <div style="color: rgba(255,255,255,0.7);">Trades</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-panel" id="selectedEntityPanel" style="display: none;">
+                <h3 id="selectedEntityName">Entity</h3>
+                <p id="selectedEntityInfo"></p>
+                <div id="selectedEntityStats"></div>
+            </div>
+
+            <div class="info-panel">
+                <h3>Recent Events</h3>
+                <div id="eventLog" style="max-height: 200px; overflow-y: auto; font-size: 12px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+                "nipplejs": "https://esm.sh/nipplejs"
+            }
+        }
+    </script>
+    
+    <script type="module" src="main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
