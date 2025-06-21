@@ -62,7 +62,30 @@
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+
+        .entity-carrier {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .carried-resource {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .carried-resource.food { background: #8BC34A; }
+        .carried-resource.wood { background: #795548; }
+        .carried-resource.stone { background: #607D8B; }
+        .carried-resource.water { background: #03A9F4; }
 
         .entity:hover {
             transform: scale(1.2);
@@ -237,4 +260,3 @@
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-

@@ -129,6 +129,11 @@ export class UI {
                 element = document.createElement('div');
                 element.className = `entity ${entity.role.name.toLowerCase()}`;
                 element.style.zIndex = '2';
+                
+                const carrier = document.createElement('div');
+                carrier.className = 'entity-carrier';
+                element.appendChild(carrier);
+
                 this.canvas.appendChild(element);
                 this.entityElements.set(entity.id, element);
             }
@@ -136,6 +141,27 @@ export class UI {
             element.style.left = `${entity.x - 10}px`;
             element.style.top = `${entity.y - 10}px`;
             element.title = `${entity.getName()} (${entity.role.name})`;
+
+            this.updateCarriedResources(entity, element);
+        });
+    }
+
+    updateCarriedResources(entity, entityElement) {
+        const carrier = entityElement.querySelector('.entity-carrier');
+        carrier.innerHTML = '';
+        
+        entity.inventory.forEach((item, index) => {
+            const resourceEl = document.createElement('div');
+            resourceEl.className = `carried-resource ${item.type}`;
+            
+            // Position carried items around the entity
+            const angle = (index / entity.inventoryCapacity) * 2 * Math.PI - (Math.PI / 2);
+            const x = Math.cos(angle) * 12;
+            const y = Math.sin(angle) * 12;
+
+            resourceEl.style.transform = `translate(${x}px, ${y}px)`;
+            
+            carrier.appendChild(resourceEl);
         });
     }
 
@@ -241,4 +267,3 @@ export class UI {
         this.update();
     }
 }
-

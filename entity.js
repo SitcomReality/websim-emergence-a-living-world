@@ -19,6 +19,9 @@ export class Entity {
             stone: Math.floor(Math.random() * 3) + 1,
             water: Math.floor(Math.random() * 4) + 2
         };
+
+        this.inventory = [];
+        this.inventoryCapacity = 2;
         
         this.relationships = new Map();
         this.energy = 100;
@@ -28,6 +31,7 @@ export class Entity {
         this.targetX = x;
         this.targetY = y;
         this.speed = 20;
+        this.targetNode = null;
         
         this.actionTimer = 0;
         this.actionInterval = 1000 + Math.random() * 2000;
@@ -46,10 +50,21 @@ export class Entity {
             this.actionTimer = 0;
             this.actionInterval = 1000 + Math.random() * 2000;
         }
+
+        // If at target node, try to gather
+        if (this.targetNode && this.isAtTarget()) {
+            this.gatherFromTargetNode();
+        }
         
         // Decay energy and happiness slightly
         this.energy = Math.max(0, this.energy - deltaTime / 10000);
         this.happiness = Math.max(0, this.happiness - deltaTime / 20000);
+    }
+
+    isAtTarget() {
+        const dx = this.targetX - this.x;
+        const dy = this.targetY - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < 2;
     }
 
     moveTowardsTarget(deltaTime) {
@@ -62,12 +77,15 @@ export class Entity {
             this.x += (dx / distance) * moveDistance;
             this.y += (dy / distance) * moveDistance;
         } else {
-            // Reached target, pick a new one
-            this.pickNewTarget();
+            // Reached target
+            if (!this.targetNode) {
+                this.pickNewTarget();
+            }
         }
     }
 
     pickNewTarget() {
+        this.targetNode = null;
         // Personality influences movement patterns
         if (this.personality.traits.curiosity > 0.7) {
             // Curious entities explore more
@@ -98,15 +116,81 @@ export class Entity {
         // Action based on current needs and personality
         const needs = this.getNeeds();
         
+        if (this.isInventoryFull()) {
+            this.depositInventory();
+            return;
+        }
+
         if (needs.length > 0) {
-            // Try to gather needed resources
-            this.gatherResources();
+            const neededResource = needs[0];
+            const targetNode = this.findClosestResourceNode(neededResource);
+            if (targetNode) {
+                this.targetNode = targetNode;
+                this.targetX = targetNode.x;
+                this.targetY = targetNode.y;
+            } else {
+                this.pickNewTarget();
+            }
         } else if (this.personality.traits.sociability > 0.5) {
             // Social interaction
             this.seekSocialInteraction();
         } else if (this.personality.traits.productivity > 0.6) {
             // Work on role-specific tasks
             this.performRoleAction();
+        } else {
+            this.pickNewTarget();
+        }
+    }
+
+    isInventoryFull() {
+        return this.inventory.length >= this.inventoryCapacity;
+    }
+
+    depositInventory() {
+        if (this.inventory.length === 0) return;
+
+        this.inventory.forEach(item => {
+            this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
+        });
+        this.world.eventSystem.addEvent(`${this.name} stored ${this.inventory.length} items.`);
+        this.inventory = [];
+        this.pickNewTarget();
+    }
+
+    findClosestResourceNode(resourceType) {
+        const nodes = this.world.getResourceNodes().filter(n => n.type === resourceType && n.amount > 0);
+        if (nodes.length === 0) return null;
+
+        let closestNode = nodes[0];
+        let minDistance = this.world.getDistance(this, closestNode);
+
+        for (let i = 1; i < nodes.length; i++) {
+            const distance = this.world.getDistance(this, nodes[i]);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestNode = nodes[i];
+            }
+        }
+        return closestNode;
+    }
+
+    gatherFromTargetNode() {
+        if (!this.targetNode || this.isInventoryFull()) {
+            this.targetNode = null;
+            this.pickNewTarget();
+            return;
+        }
+
+        const gathered = this.world.resourceManager.gatherFrom(this.targetNode);
+        if (gathered) {
+            this.inventory.push(gathered);
+            this.energy = Math.min(100, this.energy + 5);
+            this.world.eventSystem.addEvent(`${this.name} gathered ${gathered.amount} ${gathered.type}.`);
+        }
+
+        if (this.isInventoryFull() || this.targetNode.amount <= 0) {
+            this.targetNode = null;
+            this.pickNewTarget();
         }
     }
 
@@ -118,10 +202,14 @@ export class Entity {
         });
         
         if (nearbyNodes.length > 0) {
+            if (this.isInventoryFull()) {
+                this.depositInventory();
+                return;
+            }
             const node = nearbyNodes[Math.floor(Math.random() * nearbyNodes.length)];
             const gathered = this.world.resourceManager.gatherFrom(node);
             if (gathered) {
-                this.resources[gathered.type] += gathered.amount;
+                this.inventory.push(gathered);
                 this.energy = Math.min(100, this.energy + 5);
                 this.world.eventSystem.addEvent(`${this.name} gathered ${gathered.amount} ${gathered.type}`);
             }
@@ -216,4 +304,3 @@ export class Entity {
         };
     }
 }
-
