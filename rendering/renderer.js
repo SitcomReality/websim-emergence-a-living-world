@@ -40,6 +40,7 @@ export class Renderer {
         
         this.clearCanvas();
         this.drawBackground();
+        this.drawResourceAuras(this.world.getResourceNodes());
         
         this.drawResourceNodes(this.world.getResourceNodes());
         this.drawBuildings(this.world.getBuildings(), selectedBuilding, hoveredBuilding);
@@ -52,11 +53,8 @@ export class Renderer {
     }
     
     drawBackground() {
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-        gradient.addColorStop(0, '#a8e6cf');
-        gradient.addColorStop(0.5, '#dcedc8');
-        gradient.addColorStop(1, '#f8bbd9');
-        this.ctx.fillStyle = gradient;
+        // A more natural, grassy ground color
+        this.ctx.fillStyle = '#94C595';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
@@ -72,7 +70,7 @@ export class Renderer {
             this.ctx.fillStyle = colorMap[node.type] || '#ccc';
             this.ctx.globalAlpha = Math.max(0.3, node.amount / node.maxAmount);
             this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
+            this.ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
             this.ctx.fill();
         });
         this.ctx.globalAlpha = 1;
@@ -169,7 +167,7 @@ export class Renderer {
             this.ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
             
             this.drawCarriedResources(entity);
-
+            
             this.ctx.restore();
 
             if (hoveredEntity && entity.id === hoveredEntity.id) {
@@ -217,5 +215,34 @@ export class Renderer {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillText(name, entity.x, entity.y - 22);
+    }
+
+    drawResourceAuras(nodes) {
+        const auraColors = {
+            food: 'rgba(216, 175, 122, 0.2)', // Fertile ground
+            wood: 'rgba(64, 115, 66, 0.25)', // Forest floor
+            stone: 'rgba(128, 128, 128, 0.3)', // Rocky area
+            water: 'rgba(3, 169, 244, 0.2)' // Shallow water
+        };
+        const auraSize = {
+            food: 35,
+            wood: 45,
+            stone: 40,
+            water: 30
+        };
+
+        this.ctx.save();
+        nodes.forEach(node => {
+            if (auraColors[node.type]) {
+                const radius = auraSize[node.type] * (node.amount / node.maxAmount);
+                if (radius < 5) return;
+                
+                this.ctx.fillStyle = auraColors[node.type];
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+        });
+        this.ctx.restore();
     }
 }
