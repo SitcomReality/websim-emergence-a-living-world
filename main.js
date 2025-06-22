@@ -27,13 +27,17 @@ class EmergenceGame {
         });
 
         speedBtn.addEventListener('click', () => {
-            this.speed = this.speed === 1 ? 2 : this.speed === 2 ? 4 : 1;
+            const speeds = [1, 2, 4];
+            const currentSpeedIndex = speeds.indexOf(this.speed);
+            this.speed = speeds[(currentSpeedIndex + 1) % speeds.length];
             speedBtn.textContent = `${this.speed}x`;
         });
 
         resetBtn.addEventListener('click', () => {
             this.world.reset();
             this.ui.reset();
+            this.world.initialize();
+            this.ui.initialize();
         });
     }
 
@@ -62,4 +66,3 @@ class EmergenceGame {
 document.addEventListener('DOMContentLoaded', () => {
     new EmergenceGame();
 });
-

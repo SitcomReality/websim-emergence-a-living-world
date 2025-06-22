@@ -144,11 +144,6 @@ export class World {
     completeCycle() {
         this.cycleCount++;
         
-        // Entities perform their role actions
-        this.entities.forEach(entity => {
-            entity.performRoleAction();
-        });
-
         // Check for emergent events
         this.checkEmergentEvents();
     }

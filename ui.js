@@ -79,7 +79,7 @@ export class UI {
         panel.style.display = 'block';
         nameEl.textContent = info.name;
         infoEl.innerHTML = `
-            ${info.role} - ${info.personality}<br>
+            ${info.personality}<br>
             <span style="font-size: 12px; color: rgba(255,255,255,0.7)">Task: ${info.task}</span>
         `;
         
@@ -171,7 +171,7 @@ export class UI {
             
             if (!element) {
                 element = document.createElement('div');
-                element.className = `entity ${entity.role.name.toLowerCase()}`;
+                element.className = `entity creature`;
                 element.style.zIndex = '2';
                 
                 const carrier = document.createElement('div');
@@ -189,7 +189,7 @@ export class UI {
             
             element.style.left = `${entity.x - 10}px`;
             element.style.top = `${entity.y - 10}px`;
-            element.title = `${entity.getName()} (${entity.role.name})`;
+            element.title = `${entity.getName()}`;
 
             this.updateCarriedResources(entity, element);
         });

@@ -1,6 +1,7 @@
 import { Personality } from './personality.js';
 import { Role } from './role.js';
 import { generateName } from './utils.js';
+import { DecisionMaker } from './behavior/decision_maker.js';
 
 export class Entity {
     constructor(x, y, world) {
@@ -13,7 +14,7 @@ export class Entity {
         this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
 
         this.personality = new Personality();
-        this.role = Role.assignRandomRole();
+        this.decisionMaker = new DecisionMaker(this);
         
         this.resources = {
             food: Math.floor(Math.random() * 5) + 2,
@@ -21,6 +22,9 @@ export class Entity {
             stone: Math.floor(Math.random() * 3) + 1,
             water: Math.floor(Math.random() * 4) + 2
         };
+        for (const resource in this.resources) {
+            this.resources[resource] = Math.round(this.resources[resource] * 10) / 10;
+        }
 
         this.inventory = [];
         this.inventoryCapacity = 2;
@@ -36,7 +40,7 @@ export class Entity {
         this.targetNode = null;
         this.currentTask = 'idle';
         
-        this.actionTimer = 0;
+        this.actionTimer = Math.random() * 2000; // Stagger initial actions
         this.actionInterval = 3000 + Math.random() * 4000;
     }
 
@@ -63,7 +67,7 @@ export class Entity {
         }
 
         // If at target node, try to gather
-        if (this.currentTask === 'gathering' && this.targetNode && this.isAtTarget()) {
+        if (this.currentTask.startsWith('gathering') && this.targetNode && this.isAtTarget()) {
             this.gatherFromTargetNode();
         }
 
@@ -100,7 +104,7 @@ export class Entity {
             this.y += (dy / distance) * moveDistance;
         } else {
             // Reached target
-            if (this.currentTask === 'wandering' && !this.targetNode) {
+            if (this.currentTask === 'wandering' || this.currentTask === 'exploring') {
                  this.currentTask = 'idle';
             }
         }
@@ -136,38 +140,13 @@ export class Entity {
     }
 
     performAction() {
-        // Action based on current needs and personality
-        const needs = this.getNeeds();
-        
-        if (this.isInventoryFull()) {
-            this.startDepositing();
-            return;
-        }
-
-        if (needs.length > 0) {
-            const neededResource = needs[0];
-            const targetNode = this.findClosestResourceNode(neededResource);
-            if (targetNode) {
-                this.targetNode = targetNode;
-                this.targetX = targetNode.x;
-                this.targetY = targetNode.y;
-                this.currentTask = 'gathering';
-            } else {
-                this.pickNewTarget();
-            }
-        } else if (this.personality.traits.sociability > 0.5) {
-            // Social interaction
-            this.seekSocialInteraction();
-        } else if (this.personality.traits.productivity > 0.6) {
-            // Work on role-specific tasks
-            this.performRoleAction();
-        } else {
-            this.pickNewTarget();
-        }
+        this.decisionMaker.decideNextAction();
     }
 
     isInventoryFull() {
-        return this.inventory.length >= this.inventoryCapacity;
+        let carriedAmount = 0;
+        this.inventory.forEach(item => carriedAmount += item.amount);
+        return carriedAmount >= this.inventoryCapacity;
     }
 
     startDepositing() {
@@ -187,8 +166,9 @@ export class Entity {
 
         this.inventory.forEach(item => {
             this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
+            this.resources[item.type] = Math.round(this.resources[item.type] * 10) / 10;
         });
-        const storedItems = this.inventory.map(i => `${i.amount} ${i.type}`).join(', ');
+        const storedItems = this.inventory.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
         this.world.eventSystem.addEvent(`${this.name} stored ${storedItems} at home.`);
         this.inventory = [];
         this.currentTask = 'idle';
@@ -224,7 +204,14 @@ export class Entity {
 
         const gathered = this.world.resourceManager.gatherFrom(this.targetNode);
         if (gathered) {
-            this.inventory.push(gathered);
+            const existingItem = this.inventory.find(i => i.type === gathered.type);
+            if (existingItem) {
+                existingItem.amount += gathered.amount;
+                existingItem.amount = Math.round(existingItem.amount * 10) / 10;
+            } else {
+                 this.inventory.push(gathered);
+            }
+           
             this.energy = Math.min(100, this.energy + 5);
             // Don't log every single gather event to reduce spam.
             // A "stored" event will be logged later.
@@ -255,7 +242,13 @@ export class Entity {
             const node = nearbyNodes[Math.floor(Math.random() * nearbyNodes.length)];
             const gathered = this.world.resourceManager.gatherFrom(node);
             if (gathered) {
-                this.inventory.push(gathered);
+                 const existingItem = this.inventory.find(i => i.type === gathered.type);
+                if (existingItem) {
+                    existingItem.amount += gathered.amount;
+                    existingItem.amount = Math.round(existingItem.amount * 10) / 10;
+                } else {
+                    this.inventory.push(gathered);
+                }
                 this.energy = Math.min(100, this.energy + 5);
             }
         }
@@ -297,13 +290,13 @@ export class Entity {
         const needs = [];
         
         // Basic resource needs
-        if (this.resources.food < 2) needs.push('food');
-        if (this.resources.water < 2) needs.push('water');
+        if (this.resources.food < 3) needs.push('food');
+        if (this.resources.water < 3) needs.push('water');
         
-        // Role-specific needs
-        const roleNeeds = this.role.getNeeds(this);
-        needs.push(...roleNeeds);
-        
+        // Resource needs for potential crafting/building (less urgent)
+        if (this.resources.wood < 2) needs.push('wood');
+        if (this.resources.stone < 2) needs.push('stone');
+
         return needs;
     }
 
@@ -313,10 +306,12 @@ export class Entity {
 
     giveResource(type, amount) {
         this.resources[type] = Math.max(0, this.resources[type] - amount);
+        this.resources[type] = Math.round(this.resources[type] * 10) / 10;
     }
 
     receiveResource(type, amount) {
         this.resources[type] += amount;
+        this.resources[type] = Math.round(this.resources[type] * 10) / 10;
     }
 
     updateRelationship(entityId, change) {
@@ -340,7 +335,6 @@ export class Entity {
     getInfo() {
         return {
             name: this.name,
-            role: this.role.name,
             personality: this.personality.getDescription(),
             resources: this.resources,
             inventory: this.inventory,

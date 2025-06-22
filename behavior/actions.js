@@ -1,0 +1,69 @@
+// Defines the specific actions an entity can take.
+
+export function wander(entity) {
+    entity.currentTask = 'wandering';
+    const range = entity.personality.traits.curiosity > 0.7 ? 200 : 100;
+    entity.targetX = entity.x + (Math.random() - 0.5) * range;
+    entity.targetY = entity.y + (Math.random() - 0.5) * range;
+
+    // Keep within bounds
+    entity.targetX = Math.max(20, Math.min(entity.world.width - 20, entity.targetX));
+    entity.targetY = Math.max(20, Math.min(entity.world.height - 20, entity.targetY));
+}
+
+export function gatherResource(entity, resourceType) {
+    const targetNode = entity.findClosestResourceNode(resourceType);
+    if (targetNode) {
+        entity.targetNode = targetNode;
+        entity.targetX = targetNode.x;
+        entity.targetY = targetNode.y;
+        entity.currentTask = `gathering ${resourceType}`;
+    } else {
+        // If no node of that type is found, maybe explore?
+        explore(entity);
+    }
+}
+
+export function depositResources(entity) {
+    if (entity.inventory.length === 0) {
+        entity.currentTask = 'idle';
+        return;
+    };
+
+    entity.targetX = entity.homeX;
+    entity.targetY = entity.homeY;
+    entity.targetNode = null;
+    entity.currentTask = 'depositing';
+}
+
+export function explore(entity) {
+    entity.currentTask = 'exploring';
+    // Aim for a region of the map they haven't been to recently
+    entity.targetX = Math.random() * entity.world.width;
+    entity.targetY = Math.random() * entity.world.height;
+    entity.world.eventSystem.addEvent(`${entity.getName()} went off to explore.`);
+}
+
+export function seekSocialInteraction(entity) {
+    const nearbyEntity = entity.findNearbyEntity();
+    if (nearbyEntity) {
+        entity.targetX = nearbyEntity.x;
+        entity.targetY = nearbyEntity.y;
+        entity.currentTask = 'socializing';
+        entity.world.eventSystem.addEvent(`${entity.getName()} is seeking social interaction.`);
+    } else {
+        wander(entity);
+    }
+}
+
+export function pursueTrade(entity) {
+    const nearbyEntity = entity.findNearbyEntity(150); // Larger radius for trading
+    if (nearbyEntity && entity.world.canTrade(entity, nearbyEntity)) {
+        entity.world.executeTrade(entity, nearbyEntity);
+        entity.currentTask = 'idle';
+    } else {
+        // Wander to find others
+        wander(entity);
+        entity.currentTask = 'seeking trade';
+    }
+}
