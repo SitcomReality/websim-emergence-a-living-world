@@ -144,6 +144,11 @@ export class UI {
                 carrier.className = 'entity-carrier';
                 element.appendChild(carrier);
 
+                const namePlate = document.createElement('div');
+                namePlate.className = 'entity-name-plate';
+                namePlate.textContent = entity.getName();
+                element.appendChild(namePlate);
+
                 this.canvas.appendChild(element);
                 this.entityElements.set(entity.id, element);
             }
