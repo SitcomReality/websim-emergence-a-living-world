@@ -14,6 +14,7 @@ export class World {
         this.cycleCount = 0;
         this.cycleTimer = 0;
         this.cycleInterval = 5000; // 5 seconds per cycle
+        this.tradeCooldowns = new Map();
     }
 
     initialize() {
@@ -29,6 +30,7 @@ export class World {
         this.eventSystem.clear();
         this.resourceManager.reset();
         this.buildingManager.reset();
+        this.tradeCooldowns.clear();
     }
 
     generateInitialEntities() {
@@ -48,6 +50,16 @@ export class World {
     update(deltaTime) {
         this.cycleTimer += deltaTime;
         
+        // Update trade cooldowns
+        for (const [key, value] of this.tradeCooldowns.entries()) {
+            const newTime = value - deltaTime;
+            if (newTime <= 0) {
+                this.tradeCooldowns.delete(key);
+            } else {
+                this.tradeCooldowns.set(key, newTime);
+            }
+        }
+
         // Update entities
         this.entities.forEach(entity => {
             entity.update(deltaTime);
@@ -82,7 +94,8 @@ export class World {
 
     handleEntityInteraction(entity1, entity2) {
         // Check for trade opportunities
-        if (this.canTrade(entity1, entity2)) {
+        const cooldownKey = [entity1.id, entity2.id].sort().join('-');
+        if (!this.tradeCooldowns.has(cooldownKey) && this.canTrade(entity1, entity2)) {
             // Lower the probability of random trades to make them more special
             if (Math.random() < 0.1) {
                  this.executeTrade(entity1, entity2);
@@ -134,6 +147,10 @@ export class World {
                         // Update happiness after a successful trade
                         entity1.vitals.increaseHappiness(15);
                         entity2.vitals.increaseHappiness(15);
+                        
+                        // Set a cooldown to prevent immediate back-and-forth trades
+                        const cooldownKey = [entity1.id, entity2.id].sort().join('-');
+                        this.tradeCooldowns.set(cooldownKey, 5000 + Math.random() * 5000); // 5-10 second cooldown
 
                         return true;
                     }
