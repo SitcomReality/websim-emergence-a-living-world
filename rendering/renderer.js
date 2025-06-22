@@ -16,7 +16,9 @@ export class Renderer {
             'farmer_sprite.png',
             'trader_sprite.png',
             'crafter_sprite.png',
-            'explorer_sprite.png'
+            'explorer_sprite.png',
+            'night_sky.png',
+            'window_glow.png'
         ];
         
         const promises = imageList.map(src => {
@@ -38,6 +40,7 @@ export class Renderer {
     render(selectedEntity, selectedBuilding, hoveredEntity, hoveredBuilding) {
         if (!this.assetsLoaded) return;
         
+        this.ctx.save();
         this.clearCanvas();
         this.drawBackground();
         
@@ -45,6 +48,9 @@ export class Renderer {
         this.drawBuildings(this.world.getBuildings(), selectedBuilding, hoveredBuilding);
         this.drawRelationships(this.world.getEntities());
         this.drawEntities(this.world.getEntities(), selectedEntity, hoveredEntity);
+        
+        this.applyNightOverlay();
+        this.ctx.restore();
     }
 
     clearCanvas() {
@@ -52,6 +58,11 @@ export class Renderer {
     }
     
     drawBackground() {
+        if (this.world.isNight() && this.images['night_sky.png']) {
+             this.ctx.drawImage(this.images['night_sky.png'], 0, 0, this.canvas.width, this.canvas.height);
+             return;
+        }
+
         const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
         gradient.addColorStop(0, '#a8e6cf');
         gradient.addColorStop(0.5, '#dcedc8');
@@ -70,7 +81,7 @@ export class Renderer {
         
         nodes.forEach(node => {
             this.ctx.fillStyle = colorMap[node.type] || '#ccc';
-            this.ctx.globalAlpha = Math.max(0.3, node.amount / node.maxAmount);
+            this.ctx.globalAlpha = 0.5 + 0.5 * (node.amount / node.maxAmount);
             this.ctx.beginPath();
             this.ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
             this.ctx.fill();
@@ -128,6 +139,19 @@ export class Renderer {
         this.ctx.lineTo(building.x, y - 10);
         this.ctx.closePath();
         this.ctx.fill();
+
+        // Draw window glow at night
+        if (this.world.isNight() && building.ownerId) {
+            const owner = this.world.entities.find(e => e.id === building.ownerId);
+            if (owner && (owner.isSleeping || owner.isAtHome())) {
+                const glowImg = this.images['window_glow.png'];
+                if (glowImg) {
+                    this.ctx.globalAlpha = 0.8;
+                    this.ctx.drawImage(glowImg, building.x - 6, building.y - 4, 12, 8);
+                    this.ctx.globalAlpha = 1;
+                }
+            }
+        }
     }
 
     drawStorage(building, selectedBuilding, hoveredBuilding) {
@@ -293,5 +317,23 @@ export class Renderer {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillText(name, entity.x, entity.y - 22);
+    }
+
+    applyNightOverlay() {
+        if (this.world.isNight()) {
+            let darkness = 0;
+            const time = this.world.timeOfDay;
+            if (time >= 20 && time <= 24) { // Evening
+                darkness = (time - 20) / 4; // from 0 to 1
+            } else if (time >= 0 && time < 6) { // Early morning
+                darkness = (6 - time) / 6; // from 1 to 0
+            }
+            darkness = Math.min(darkness, 0.7); // cap darkness
+            
+            if (darkness > 0) {
+                 this.ctx.fillStyle = `rgba(10, 5, 40, ${darkness})`;
+                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
     }
 }

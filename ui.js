@@ -139,7 +139,7 @@ export class UI {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 12px;">
                     <div>Energy: ${info.energy}</div>
                     <div>Happiness: ${info.happiness}</div>
-                    <div>Age: ${info.age}s</div>
+                    <div>Age: ${info.age} / ${info.lifespan}</div>
                     <div>Relationships: ${info.relationships}</div>
                 </div>
                 <div style="margin-top: 8px; font-size: 11px;">
@@ -267,10 +267,13 @@ export class UI {
         document.getElementById('cycleCount').textContent = this.world.getCycleCount();
         document.getElementById('relationshipCount').textContent = Math.floor(relationshipCount / 2);
 
-        // Count trades (simplified - just count recent trade events)
-        const recentEvents = this.world.getEvents();
-        const tradeEvents = recentEvents.filter(e => e.message.includes('traded'));
-        document.getElementById('tradeCount').textContent = tradeEvents.length;
+        // Update time of day display
+        const time = this.world.timeOfDay;
+        const hour = Math.floor(time);
+        const minutes = Math.floor((time % 1) * 60);
+        const timeString = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        document.getElementById('tradeCount').previousElementSibling.textContent = 'Time';
+        document.getElementById('tradeCount').textContent = timeString;
 
         // Update resource counts
         const resourceTotals = this.world.resourceManager.getTotalResources();

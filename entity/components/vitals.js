@@ -3,6 +3,7 @@ export class Vitals {
         this.energy = energy;
         this.happiness = happiness;
         this.age = age;
+        this.lifespan = 480 + Math.random() * 240; // Lives for 8-12 minutes
     }
 
     update(deltaTime) {
@@ -23,7 +24,8 @@ export class Vitals {
         return {
             energy: this.energy,
             happiness: this.happiness,
-            age: this.age
+            age: this.age,
+            lifespan: this.lifespan
         };
     }
 
@@ -31,6 +33,6 @@ export class Vitals {
         this.energy = data.energy;
         this.happiness = data.happiness;
         this.age = data.age;
+        this.lifespan = data.lifespan || 600;
     }
 }
-

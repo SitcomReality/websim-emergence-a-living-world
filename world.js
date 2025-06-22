@@ -11,9 +11,12 @@ export class World {
         this.buildingManager = new BuildingManager(this);
         this.width = 800;
         this.height = 600;
-        this.cycleCount = 0;
-        this.cycleTimer = 0;
-        this.cycleInterval = 5000; // 5 seconds per cycle
+
+        // Timekeeping
+        this.cycleCount = 0; // Represents days
+        this.timeOfDay = 6; // Start at 6am
+        this.dayDuration = 120000; // 2 minutes per day
+        
         this.tradeCooldowns = new Map();
     }
 
@@ -26,7 +29,7 @@ export class World {
     reset() {
         this.entities = [];
         this.cycleCount = 0;
-        this.cycleTimer = 0;
+        this.timeOfDay = 6;
         this.eventSystem.clear();
         this.resourceManager.reset();
         this.buildingManager.reset();
@@ -40,15 +43,29 @@ export class World {
             const entity = new Entity(
                 Math.random() * (this.width - 40) + 20,
                 Math.random() * (this.height - 40) + 20,
-                this,
-                i === 0 // Make the first entity have a home for testing/initial state
+                this
             );
             this.entities.push(entity);
         }
     }
 
     update(deltaTime) {
-        this.cycleTimer += deltaTime;
+        // Update time of day
+        const timeIncrement = (deltaTime / this.dayDuration) * 24;
+        this.timeOfDay = (this.timeOfDay + timeIncrement) % 24;
+        if (this.timeOfDay < 6 && this.timeOfDay - timeIncrement >= 22 && this.isDay()) { // Rough check for midnight crossing
+             // This check is flawed, better to check for day change
+        }
+
+        const oldDay = this.cycleCount;
+        const newDay = Math.floor(this.timeOfDay / 24); // This isn't quite right with modulo. Let's fix.
+        
+        const lastTimeOfDay = (this.timeOfDay - timeIncrement + 24) % 24;
+        if(this.timeOfDay < lastTimeOfDay) { // A new day has dawned
+            this.cycleCount++;
+            this.eventSystem.addEvent(`Day ${this.cycleCount} has begun.`);
+            this.processDailyEvents();
+        }
         
         // Update trade cooldowns
         for (const [key, value] of this.tradeCooldowns.entries()) {
@@ -71,10 +88,17 @@ export class World {
         // Update resources
         this.resourceManager.update(deltaTime);
 
-        // Check for cycle completion
-        if (this.cycleTimer >= this.cycleInterval) {
-            this.completeCycle();
-            this.cycleTimer = 0;
+        // Remove dead entities
+        const deadEntities = this.entities.filter(e => !e.isAlive);
+        if (deadEntities.length > 0) {
+            deadEntities.forEach(dead => {
+                this.eventSystem.addEvent(`${dead.name} has passed away of old age.`);
+                // Make their home abandoned
+                if (dead.home) {
+                    dead.home.ownerId = null;
+                }
+            });
+            this.entities = this.entities.filter(e => e.isAlive);
         }
     }
 
@@ -102,8 +126,10 @@ export class World {
             }
         }
 
-        // Update relationships
-        this.updateRelationship(entity1, entity2);
+        // Social interaction check
+        if (entity1.currentTask === 'socializing' && entity2.currentTask === 'socializing') {
+            this.updateRelationship(entity1, entity2);
+        }
     }
 
     canTrade(entity1, entity2) {
@@ -161,8 +187,52 @@ export class World {
     }
 
     updateRelationship(entity1, entity2) {
-        entity1.updateRelationship(entity2.id, 0.1);
-        entity2.updateRelationship(entity1.id, 0.1);
+        const socialBonus = 0.02; // Small relationship boost from proximity/interaction
+        entity1.updateRelationship(entity2.id, socialBonus);
+        entity2.updateRelationship(entity1.id, socialBonus);
+    }
+
+    processDailyEvents() {
+        this.checkReproduction();
+    }
+
+    checkReproduction() {
+        const potentialParents = this.entities.filter(e => e.home && e.vitals.happiness > 60 && e.vitals.age > 120); // must be adult
+        
+        for (const parent1 of potentialParents) {
+            const relationships = parent1.getRelationships().filter(r => r.type === 'friendship' && r.value > 0.8);
+            if (relationships.length === 0) continue;
+
+            for (const rel of relationships) {
+                const parent2 = this.entities.find(e => e.id === rel.targetId);
+                if (potentialParents.includes(parent2)) {
+                    // Found a potential couple
+                    if (Math.random() < 0.15) { // 15% chance per day if conditions are met
+                        this.spawnChild(parent1, parent2);
+                        // Prevent same couple from having another child immediately
+                        potentialParents.splice(potentialParents.indexOf(parent1), 1);
+                        potentialParents.splice(potentialParents.indexOf(parent2), 1);
+                        break; // parent1 has had a child, move to next potential parent
+                    }
+                }
+            }
+        }
+    }
+
+    spawnChild(parent1, parent2) {
+        const home = parent1.home;
+        const child = new Entity(home.x, home.y, this);
+        child.home = home;
+        child.homeLocation = { x: home.x, y: home.y };
+        child.vitals.age = 0;
+        child.resources = { food: 2, water: 2, wood: 0, stone: 0 }; // Start with a small gift
+        
+        this.entities.push(child);
+        this.eventSystem.addEvent(`${child.name} was born to ${parent1.name} and ${parent2.name}!`);
+
+        // Give parents a big happiness boost
+        parent1.vitals.increaseHappiness(40);
+        parent2.vitals.increaseHappiness(40);
     }
 
     completeCycle() {
@@ -173,9 +243,10 @@ export class World {
     }
 
     checkEmergentEvents() {
-        // Population growth/decline
-        if (this.entities.length < 15 && Math.random() < 0.3) {
-            this.spawnNewEntity();
+        // Population growth/decline (This is now handled by birth/death)
+        if (this.entities.length === 0 && Math.random() < 0.1) {
+             this.eventSystem.addEvent("A lone traveler arrives, seeking a new life.");
+             this.spawnNewEntity();
         }
 
         // Resource depletion events
@@ -212,6 +283,14 @@ export class World {
         return this.cycleCount;
     }
 
+    isDay() {
+        return this.timeOfDay > 6 && this.timeOfDay < 20;
+    }
+
+    isNight() {
+        return !this.isDay();
+    }
+
     getBuildings() {
         return this.buildingManager.getBuildings();
     }
@@ -226,7 +305,7 @@ export class World {
             resourceManager: this.resourceManager.serialize(),
             buildingManager: this.buildingManager.serialize(),
             cycleCount: this.cycleCount,
-            cycleTimer: this.cycleTimer,
+            timeOfDay: this.timeOfDay,
         };
     }
 
@@ -234,7 +313,7 @@ export class World {
         this.reset();
 
         this.cycleCount = data.cycleCount || 0;
-        this.cycleTimer = data.cycleTimer || 0;
+        this.timeOfDay = data.timeOfDay || 6;
 
         this.resourceManager.deserialize(data.resourceManager);
         this.buildingManager.deserialize(data.buildingManager, this);

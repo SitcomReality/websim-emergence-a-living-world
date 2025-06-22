@@ -11,6 +11,26 @@ export function wander(entity) {
     entity.targetY = Math.max(20, Math.min(entity.world.height - 20, entity.targetY));
 }
 
+export function sleep(entity) {
+    if (entity.home) {
+        if (entity.isAtHome()) {
+            entity.currentTask = 'sleeping';
+            entity.isSleeping = true;
+            entity.world.eventSystem.addEvent(`${entity.getName()} is going to sleep.`);
+        } else {
+            entity.targetX = entity.homeX;
+            entity.targetY = entity.homeY;
+            entity.targetNode = entity.home;
+            entity.currentTask = 'going home to sleep';
+        }
+    } else {
+        // Homeless entities find a secluded spot to rest
+        entity.currentTask = 'sleeping';
+        entity.isSleeping = true; // They sleep where they are, less effective
+        entity.world.eventSystem.addEvent(`${entity.getName()} rests under the stars.`);
+    }
+}
+
 export function findHomeLocation(entity) {
     entity.currentTask = 'finding a home location';
     // Simplified logic: find a good spot near resources, not too close to others.
