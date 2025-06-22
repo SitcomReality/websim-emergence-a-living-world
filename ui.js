@@ -218,6 +218,13 @@ export class UI {
         const recentEvents = this.world.getEvents();
         const tradeEvents = recentEvents.filter(e => e.message.includes('traded'));
         document.getElementById('tradeCount').textContent = tradeEvents.length;
+
+        // Update resource counts
+        const resourceTotals = this.world.resourceManager.getTotalResources();
+        document.getElementById('foodCount').textContent = resourceTotals.food.toFixed(1);
+        document.getElementById('waterCount').textContent = resourceTotals.water.toFixed(1);
+        document.getElementById('woodCount').textContent = resourceTotals.wood.toFixed(1);
+        document.getElementById('stoneCount').textContent = resourceTotals.stone.toFixed(1);
     }
 
     updateEventLog() {

@@ -1,7 +1,7 @@
 export class ResourceManager {
     constructor() {
         this.nodes = [];
-        this.totalResources = 0;
+        this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
     }
 
     generateResources(worldWidth, worldHeight) {
@@ -31,6 +31,7 @@ export class ResourceManager {
                 const y = Math.max(20, Math.min(worldHeight - 20, centerY + Math.sin(angle) * distance));
                 
                 this.createNode('water', x, y, 4 + Math.floor(Math.random() * 3), 6 + Math.floor(Math.random() * 4));
+                this.updateTotalResources();
             }
         }
         
@@ -62,6 +63,7 @@ export class ResourceManager {
             if (currentX >= 20 && currentX <= worldWidth - 20 && 
                 currentY >= 20 && currentY <= worldHeight - 20) {
                 this.createNode('water', currentX, currentY, 2 + Math.floor(Math.random() * 2), 4 + Math.floor(Math.random() * 2));
+                this.updateTotalResources();
             }
         }
     }
@@ -83,6 +85,7 @@ export class ResourceManager {
                 const y = Math.max(20, Math.min(worldHeight - 20, centerY + Math.sin(angle) * distance));
                 
                 this.createNode('food', x, y, 3 + Math.floor(Math.random() * 4), 5 + Math.floor(Math.random() * 3));
+                this.updateTotalResources();
             }
         }
     }
@@ -106,6 +109,7 @@ export class ResourceManager {
                 const y = Math.max(20, Math.min(worldHeight - 20, centerY + Math.sin(angle) * distance));
                 
                 this.createNode('wood', x, y, 2 + Math.floor(Math.random() * 3), 4 + Math.floor(Math.random() * 2));
+                this.updateTotalResources();
             }
         }
     }
@@ -135,6 +139,7 @@ export class ResourceManager {
                     Math.sin(veinDirection + Math.PI/2) * scatterDistance));
                 
                 this.createNode('stone', x, y, 3 + Math.floor(Math.random() * 4), 5 + Math.floor(Math.random() * 3));
+                this.updateTotalResources();
             }
         }
     }
@@ -197,6 +202,7 @@ export class ResourceManager {
         this.createNode(type, x, y, 
             Math.floor(Math.random() * 5) + 3, 
             Math.floor(Math.random() * 5) + 5);
+        this.updateTotalResources();
     }
 
     gatherFrom(node) {
@@ -227,11 +233,16 @@ export class ResourceManager {
     }
 
     updateTotalResources() {
-        this.totalResources = this.nodes.reduce((sum, node) => sum + node.amount, 0);
+        this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
+        this.nodes.forEach(node => {
+            if (this.resourceTotals[node.type] !== undefined) {
+                this.resourceTotals[node.type] += node.amount;
+            }
+        });
     }
 
     getTotalResources() {
-        return this.totalResources;
+        return this.resourceTotals;
     }
 
     getNodes() {
@@ -240,6 +251,6 @@ export class ResourceManager {
 
     reset() {
         this.nodes = [];
-        this.totalResources = 0;
+        this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
     }
 }
