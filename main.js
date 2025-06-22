@@ -41,9 +41,9 @@ class EmergenceGame {
         });
     }
 
-    start() {
+    async start() {
         this.world.initialize();
-        this.ui.initialize();
+        await this.ui.initialize();
         this.gameLoop();
     }
 
