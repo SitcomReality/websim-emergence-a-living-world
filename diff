@@ -1,0 +1,68 @@
+--- a/resource.js
++++ b/resource.js
+@@ -95,7 +95,7 @@
+     gatherFrom(node) {
+         if (node.amount > 0) {
+             const gathered = Math.min(1, node.amount);
+             node.amount -= gathered;
+             this.updateTotalResources();
+-            return { type: node.type, amount: gathered };
++            return { type: node.type, amount: Math.round(gathered * 10) / 10 };
+         }
+         return null;
+     }
+
+@@ -104,7 +104,9 @@
+     update(deltaTime) {
+         // Regenerate resources over time
+         this.nodes.forEach(node => {
+             if (node.amount < node.maxAmount) {
+-                node.amount = Math.min(node.maxAmount, node.amount + node.regenerationRate * (deltaTime / 1000));
++                const newAmount = node.amount + node.regenerationRate * (deltaTime / 1000);
++                node.amount = Math.min(node.maxAmount, newAmount);
++                node.amount = Math.round(node.amount * 10) / 10;
+             }
+         });
+         
+@@ -232,7 +234,7 @@
+                     <div>Carrying: ${inventoryText}</div>
+                 </div>
+             </div>
+-            <div style="margin-top: 8px; font-size: 11px;">
++            <div style="margin-top: 8px; font-size: 11px;">
+                 <div>Resources (at home):</div>
+                 <div style="margin-left: 10px;">
+-                    Food: ${info.resources.food}, Water: ${info.resources.water}<br>
+-                    Wood: ${info.resources.wood}, Stone: ${info.resources.stone}
++                    Food: ${info.resources.food.toFixed(1)}, Water: ${info.resources.water.toFixed(1)}<br>
++                    Wood: ${info.resources.wood.toFixed(1)}, Stone: ${info.resources.stone.toFixed(1)}
+                 </div>
+             </div>
+@@ -315,7 +317,7 @@
+         element.style.left = `${node.x - 6}px`;
+         element.style.top = `${node.y - 6}px`;
+         element.style.opacity = Math.max(0.3, node.amount / node.maxAmount);
+-        element.title = `${node.type}: ${node.amount}/${node.maxAmount}`;
++        element.title = `${node.type}: ${node.amount.toFixed(1)}/${node.maxAmount}`;
+     });
+
+@@ -472,7 +474,7 @@
+     finishDepositing() {
+         if (this.inventory.length === 0) return;
+
+         this.inventory.forEach(item => {
+-            this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
++            this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
+             this.resources[item.type] = Math.round(this.resources[item.type] * 10) / 10;
+         });
+         const storedItems = this.inventory.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
+@@ -521,8 +523,10 @@
+     giveResource(type, amount) {
+         this.resources[type] = Math.max(0, this.resources[type] - amount);
++        this.resources[type] = Math.round(this.resources[type] * 10) / 10;
+     }
+
+     receiveResource(type, amount) {
+         this.resources[type] += amount;
++        this.resources[type] = Math.round(this.resources[type] * 10) / 10;
+     }
