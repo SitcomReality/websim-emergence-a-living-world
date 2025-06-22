@@ -253,4 +253,15 @@ export class ResourceManager {
         this.nodes = [];
         this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
     }
+
+    serialize() {
+        return {
+            nodes: this.nodes
+        };
+    }
+
+    deserialize(data) {
+        this.nodes = data.nodes || [];
+        this.updateTotalResources();
+    }
 }

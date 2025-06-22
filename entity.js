@@ -13,6 +13,9 @@ export class Entity {
         this.home = null;
         this.storageShed = null;
         this.homeLocation = null; // Planned {x, y} for home
+        this.homeId = null; // for saving
+        this.storageShedId = null; // for saving
+        this.targetNodeId = null; // for saving
 
         if (hasHome) {
             this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
@@ -48,6 +51,13 @@ export class Entity {
         
         this.actionTimer = Math.random() * 2000; // Stagger initial actions
         this.actionInterval = 3000 + Math.random() * 4000;
+    }
+
+    static createFromSave(data, world) {
+        // Create a blank entity, then populate it.
+        const entity = new Entity(data.x, data.y, world);
+        entity.deserialize(data);
+        return entity;
     }
 
     get homeX() {
@@ -470,5 +480,75 @@ export class Entity {
             age: Math.round(this.age),
             relationships: this.getRelationships().filter(r => r.type !== 'neutral').length
         };
+    }
+
+    serialize() {
+        return {
+            id: this.id,
+            x: this.x,
+            y: this.y,
+            name: this.name,
+            homeId: this.home ? this.home.id : null,
+            storageShedId: this.storageShed ? this.storageShed.id : null,
+            homeLocation: this.homeLocation,
+            personality: this.personality.traits,
+            resources: this.resources,
+            inventory: this.inventory,
+            relationships: Array.from(this.relationships.entries()),
+            energy: this.energy,
+            happiness: this.happiness,
+            age: this.age,
+            targetX: this.targetX,
+            targetY: this.targetY,
+            targetNodeId: this.targetNode ? this.targetNode.id : null,
+            currentTask: this.currentTask,
+            actionTimer: this.actionTimer,
+            actionInterval: this.actionInterval
+        };
+    }
+
+    deserialize(data) {
+        // Simple properties
+        Object.assign(this, {
+            id: data.id,
+            x: data.x,
+            y: data.y,
+            name: data.name,
+            homeLocation: data.homeLocation,
+            resources: data.resources,
+            inventory: data.inventory,
+            energy: data.energy,
+            happiness: data.happiness,
+            age: data.age,
+            targetX: data.targetX,
+            targetY: data.targetY,
+            currentTask: data.currentTask,
+            actionTimer: data.actionTimer,
+            actionInterval: data.actionInterval
+        });
+
+        // Complex properties that need reconstruction/linking
+        this.personality.traits = data.personality;
+        this.relationships = new Map(data.relationships);
+
+        // Store IDs for linking after all objects are created
+        this.homeId = data.homeId;
+        this.storageShedId = data.storageShedId;
+        this.targetNodeId = data.targetNodeId;
+    }
+
+    linkSavedData() {
+        // Link object references from saved IDs
+        if (this.homeId) {
+            this.home = this.world.buildingManager.getBuildingById(this.homeId);
+        }
+        if (this.storageShedId) {
+            this.storageShed = this.world.buildingManager.getBuildingById(this.storageShedId);
+        }
+        if (this.targetNodeId) {
+            // Target could be a resource node or a building
+            this.targetNode = this.world.resourceManager.getNodes().find(n => n.id === this.targetNodeId) ||
+                              this.world.buildingManager.getBuildingById(this.targetNodeId);
+        }
     }
 }

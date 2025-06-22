@@ -196,4 +196,31 @@ export class World {
     getEvents() {
         return this.eventSystem.getRecentEvents();
     }
+    
+    serialize() {
+        return {
+            entities: this.entities.map(e => e.serialize()),
+            resourceManager: this.resourceManager.serialize(),
+            buildingManager: this.buildingManager.serialize(),
+            cycleCount: this.cycleCount,
+            cycleTimer: this.cycleTimer,
+        };
+    }
+
+    deserialize(data) {
+        this.reset();
+
+        this.cycleCount = data.cycleCount || 0;
+        this.cycleTimer = data.cycleTimer || 0;
+
+        this.resourceManager.deserialize(data.resourceManager);
+        this.buildingManager.deserialize(data.buildingManager, this);
+
+        this.entities = data.entities.map(entityData => {
+            return Entity.createFromSave(entityData, this);
+        });
+
+        // Post-deserialization linking
+        this.entities.forEach(entity => entity.linkSavedData());
+    }
 }

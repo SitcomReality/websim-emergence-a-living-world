@@ -160,10 +160,10 @@ export class BuildingManager {
                 if (this.getBuildingAt(x, y, 30)) continue;
 
                 // Proximity to resources
-                const water = entity.findClosestResourceNode('water', {x,y});
-                const food = entity.findClosestResourceNode('food', {x,y});
-                if (water) score += 5000 / this.world.getDistance({x,y}, water);
-                if (food) score += 5000 / this.world.getDistance({x,y}, food);
+                const waterNode = this.world.resourceManager.getNodes().find(n => n.type === 'water');
+                const foodNode = this.world.resourceManager.getNodes().find(n => n.type === 'food');
+                if (waterNode) score += 5000 / this.world.getDistance({x,y}, waterNode);
+                if (foodNode) score += 5000 / this.world.getDistance({x,y}, foodNode);
                 
                 // Add some random fuzz
                 score += Math.random() * 50;
@@ -185,11 +185,33 @@ export class BuildingManager {
         });
     }
 
+    getBuildingById(id) {
+        return this.buildings.find(b => b.id === id);
+    }
+
     getBuildings() {
         return this.buildings;
     }
 
     reset() {
         this.buildings = [];
+    }
+
+    serialize() {
+        return {
+            buildings: this.buildings.map(b => ({ ...b })) // Simple properties can be shallow copied
+        };
+    }
+
+    deserialize(data, world) {
+        this.world = world;
+        this.buildings = [];
+        if (data && data.buildings) {
+            this.buildings = data.buildings.map(buildingData => {
+                const building = new Building(buildingData.ownerId, buildingData.x, buildingData.y, buildingData.type);
+                Object.assign(building, buildingData);
+                return building;
+            });
+        }
     }
 }

@@ -19,6 +19,8 @@ class EmergenceGame {
         const playBtn = document.getElementById('playBtn');
         const speedBtn = document.getElementById('speedBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadBtn = document.getElementById('loadBtn');
 
         playBtn.addEventListener('click', () => {
             this.isRunning = !this.isRunning;
@@ -39,6 +41,47 @@ class EmergenceGame {
             this.world.initialize();
             this.ui.initialize();
         });
+
+        saveBtn.addEventListener('click', () => this.saveGame());
+        loadBtn.addEventListener('click', () => this.loadGame());
+    }
+
+    saveGame() {
+        const wasRunning = this.isRunning;
+        this.isRunning = false;
+        try {
+            const saveData = this.world.serialize();
+            localStorage.setItem('emergenceSaveData', JSON.stringify(saveData));
+            console.log('Game saved!');
+            this.world.eventSystem.addEvent("World state saved.");
+        } catch (e) {
+            console.error("Failed to save game:", e);
+            this.world.eventSystem.addEvent("Error: Could not save world state.");
+        }
+        this.isRunning = wasRunning;
+    }
+
+    loadGame() {
+        const saveDataString = localStorage.getItem('emergenceSaveData');
+        if (saveDataString) {
+            this.isRunning = false;
+            try {
+                const saveData = JSON.parse(saveDataString);
+                this.world.deserialize(saveData);
+                this.ui.reset();
+                this.ui.initialize(); // Re-initialize UI with new world state
+                this.world.eventSystem.addEvent("World state loaded.");
+                console.log('Game loaded!');
+            } catch (e) {
+                console.error("Failed to load game:", e);
+                this.world.eventSystem.addEvent("Error: Could not load world state. Starting new world.");
+                this.world.initialize();
+            }
+            this.isRunning = true;
+        } else {
+            console.log('No save data found.');
+            this.world.eventSystem.addEvent("No save data found.");
+        }
     }
 
     async start() {
