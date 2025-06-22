@@ -100,9 +100,15 @@ export class World {
         const entity1Has = entity1.getResources();
         const entity2Has = entity2.getResources();
 
-        // Trade if one has surplus of what the other needs
-        return entity1Needs.some(need => entity2Has[need] > 2) &&
-               entity2Needs.some(need => entity1Has[need] > 2);
+        const entity1CanGive = Object.keys(entity1Has).filter(r => entity1Has[r] > 2 && entity2Needs.includes(r));
+        const entity2CanGive = Object.keys(entity2Has).filter(r => entity2Has[r] > 2 && entity1Needs.includes(r));
+
+        if (entity1CanGive.length === 0 || entity2CanGive.length === 0) {
+            return false;
+        }
+
+        // Check if there is a non-overlapping trade possible.
+        return entity1CanGive.some(give1 => entity2CanGive.some(give2 => give1 !== give2));
     }
 
     executeTrade(entity1, entity2) {
@@ -112,10 +118,10 @@ export class World {
         const entity2Has = entity2.getResources();
 
         // Find mutual trade opportunity
-        for (const need of entity1Needs) {
-            if (entity2Has[need] > 0) {
-                for (const give of entity2Needs) {
-                    if (entity1Has[give] > 0) {
+        for (const need of entity1Needs) { // What entity1 wants
+            if (entity2Has[need] > 2) { // Check for surplus
+                for (const give of entity2Needs) { // What entity1 can give (that entity2 wants)
+                    if (entity1Has[give] > 2 && need !== give) { // Check for surplus and that it's not the same resource
                         // Execute trade
                         const tradeAmount = 1;
                         entity1.giveResource(give, tradeAmount);
