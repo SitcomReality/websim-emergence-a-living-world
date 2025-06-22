@@ -13,7 +13,6 @@ export class Entity {
         this.y = y;
         this.world = world;
         this.name = generateName();
-        this.isAlive = true;
         
         this.home = null;
         this.storageShed = null;
@@ -27,7 +26,7 @@ export class Entity {
 
         this.inventory = new Inventory();
         this.relationships = new Relationships();
-        this.vitals = new Vitals(100, 50, Math.random() * 100); // Start with some age variation
+        this.vitals = new Vitals();
 
         if (hasHome) {
             this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
@@ -50,7 +49,6 @@ export class Entity {
         this.speed = 20;
         this.targetNode = null;
         this.currentTask = 'idle';
-        this.isSleeping = false;
         
         this.actionTimer = Math.random() * 2000; // Stagger initial actions
         this.actionInterval = 3000 + Math.random() * 4000;
@@ -73,34 +71,12 @@ export class Entity {
 
     getDepositPoint() {
         // Priority: Home > Storage Shed
-        if (this.home) return this.home;
-        if (this.storageShed) return this.storageShed;
-        // Homeless entities have nowhere to deposit
-        return null;
+        return this.home || this.storageShed;
     }
 
     update(deltaTime) {
-        if (!this.isAlive) return;
-
         this.vitals.update(deltaTime);
         this.actionTimer += deltaTime;
-
-        // Check for death
-        if (this.vitals.age > this.vitals.lifespan) {
-            this.isAlive = false;
-            return;
-        }
-
-        if (this.isSleeping) {
-            // Restore energy while sleeping
-            this.vitals.increaseEnergy((deltaTime / 1000) * 5); // Faster energy regen
-            if (this.vitals.energy >= 100 || this.world.isDay()) {
-                this.isSleeping = false;
-                this.currentTask = 'idle';
-                this.world.eventSystem.addEvent(`${this.name} woke up.`);
-            }
-            return; // Do nothing else while sleeping
-        }
         
         // Move towards target
         this.moveTowardsTarget(deltaTime);
@@ -159,7 +135,7 @@ export class Entity {
             this.y += (dy / distance) * moveDistance;
         } else {
             // Reached target
-            if (this.currentTask === 'wandering' || this.currentTask === 'exploring' || this.currentTask === 'going home to sleep') {
+            if (this.currentTask === 'wandering' || this.currentTask === 'exploring') {
                  this.currentTask = 'idle';
             }
             if (this.targetNode) {
@@ -387,7 +363,7 @@ export class Entity {
         this.resources[type] = Math.round(this.resources[type] * 10) / 10;
     }
 
-    updateRelationship(entityId, change) {
+    updateRelationshipValue(entityId, change) {
         this.relationships.update(entityId, change);
     }
 
@@ -409,7 +385,6 @@ export class Entity {
             energy: Math.round(this.vitals.energy),
             happiness: Math.round(this.vitals.happiness),
             age: Math.round(this.vitals.age),
-            lifespan: Math.round(this.vitals.lifespan),
             relationships: this.relationships.getNonNeutralCount()
         };
     }
@@ -420,7 +395,6 @@ export class Entity {
             x: this.x,
             y: this.y,
             name: this.name,
-            isAlive: this.isAlive,
             homeId: this.home ? this.home.id : null,
             storageShedId: this.storageShed ? this.storageShed.id : null,
             homeLocation: this.homeLocation,
@@ -434,8 +408,7 @@ export class Entity {
             targetNodeId: this.targetNode ? this.targetNode.id : null,
             currentTask: this.currentTask,
             actionTimer: this.actionTimer,
-            actionInterval: this.actionInterval,
-            isSleeping: this.isSleeping,
+            actionInterval: this.actionInterval
         };
     }
 
@@ -452,9 +425,7 @@ export class Entity {
             targetY: data.targetY,
             currentTask: data.currentTask,
             actionTimer: data.actionTimer,
-            actionInterval: data.actionInterval,
-            isAlive: data.isAlive !== false, // Default to true if not specified
-            isSleeping: data.isSleeping || false,
+            actionInterval: data.actionInterval
         });
 
         // Complex properties that need reconstruction/linking

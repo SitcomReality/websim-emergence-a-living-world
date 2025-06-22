@@ -155,9 +155,6 @@
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             z-index: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .building-home::before {
@@ -170,21 +167,6 @@
             border-left: 14px solid transparent;
             border-right: 14px solid transparent;
             border-bottom: 10px solid #795548;
-        }
-
-        .window-glow {
-            width: 12px;
-            height: 8px;
-            background-image: url('window_glow.png');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-        }
-        
-        .building-home.occupied-night .window-glow {
-            opacity: 0.8;
         }
 
         .resource-node {
@@ -275,6 +257,19 @@
         .relationship-line.rivalry { stroke: #F44336; }
         .relationship-line.trade { stroke: #FF9800; }
 
+        .visual-effect {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+            animation: fade-out 1.5s ease-in-out forwards;
+            font-size: 20px;
+        }
+        
+        @keyframes fade-out {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-20px) scale(0.8); opacity: 0; }
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 0.7; }
             50% { opacity: 1; }
@@ -317,8 +312,8 @@
                         <div style="color: rgba(255,255,255,0.7);">Relationships</div>
                     </div>
                     <div class="stat">
-                        <div style="font-weight: bold;" id="timeValue">00:00</div>
-                        <div style="color: rgba(255,255,255,0.7);" id="timeLabel">Time</div>
+                        <div style="font-weight: bold;" id="tradeCount">0</div>
+                        <div style="color: rgba(255,255,255,0.7);">Trades</div>
                     </div>
                 </div>
                 <div id="resourceStats" class="stats" style="grid-template-columns: repeat(4, 1fr); gap: 5px;">

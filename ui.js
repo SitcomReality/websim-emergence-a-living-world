@@ -83,6 +83,13 @@ export class UI {
             this.hoveredEntity = null;
             this.hoveredBuilding = null;
         });
+
+        this.world.eventSystem.addEvent = this.world.eventSystem.addEvent.bind(this.world.eventSystem);
+        const originalAddEvent = this.world.eventSystem.addEvent;
+        this.world.eventSystem.addEvent = (message) => {
+            originalAddEvent(message);
+            this.updateEventLog(); 
+        };
     }
 
     selectEntity(entity) {
@@ -139,7 +146,7 @@ export class UI {
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 12px;">
                     <div>Energy: ${info.energy}</div>
                     <div>Happiness: ${info.happiness}</div>
-                    <div>Age: ${info.age} / ${info.lifespan}</div>
+                    <div>Age: ${info.age}s</div>
                     <div>Relationships: ${info.relationships}</div>
                 </div>
                 <div style="margin-top: 8px; font-size: 11px;">
@@ -253,8 +260,6 @@ export class UI {
 
         // Update sidebar UI
         this.updateStats();
-        this.updateEventLog();
-
         this.updateSelectionPanel();
     }
 
@@ -267,16 +272,10 @@ export class UI {
         document.getElementById('cycleCount').textContent = this.world.getCycleCount();
         document.getElementById('relationshipCount').textContent = Math.floor(relationshipCount / 2);
 
-        // Update time of day display
-        const time = this.world.timeOfDay;
-        const hour = Math.floor(time);
-        const minutes = Math.floor((time % 1) * 60);
-        const timeString = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        
-        const timeValueEl = document.getElementById('timeValue');
-        if (timeValueEl) {
-            timeValueEl.textContent = timeString;
-        }
+        // Count trades (simplified - just count recent trade events)
+        const recentEvents = this.world.getEvents();
+        const tradeEvents = recentEvents.filter(e => e.message.includes('traded'));
+        document.getElementById('tradeCount').textContent = tradeEvents.length;
 
         // Update resource counts
         const resourceTotals = this.world.resourceManager.getTotalResources();

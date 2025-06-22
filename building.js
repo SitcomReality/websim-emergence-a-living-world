@@ -22,7 +22,6 @@ export class Building {
         this.y = y;
         this.type = type;
         this.level = 1;
-        this.isOccupiedNight = false;
         
         // Properties for all buildings
         this.inventory = { food: 0, water: 0, wood: 0, stone: 0 };
@@ -128,9 +127,6 @@ export class BuildingManager {
         const owner = this.world.entities.find(e => e.id === site.ownerId);
         if (!owner) { // Owner might have died
             this.buildings = this.buildings.filter(b => b.id !== site.id); // remove site
-            // Create an abandoned home
-            const abandonedHome = new Building(null, site.x, site.y, 'home');
-            this.buildings.push(abandonedHome);
             return null;
         }
 

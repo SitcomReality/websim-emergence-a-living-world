@@ -9,13 +9,7 @@ export class DecisionMaker {
     decideNextAction() {
         const entity = this.entity;
 
-        // -1. HIGHEST PRIORITY: Time sensitive actions (like sleeping)
-        if (entity.world.isNight() && entity.vitals.energy < 80) {
-            Actions.sleep(entity);
-            return;
-        }
-
-        // 0. HIGH PRIORITY: Establish a home if homeless
+        // 0. HIGHEST PRIORITY: Establish a home if homeless
         if (!entity.home) {
             this.decideActionForHomeless();
             return;
