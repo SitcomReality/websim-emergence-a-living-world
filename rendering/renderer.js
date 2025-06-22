@@ -35,14 +35,14 @@ export class Renderer {
         this.assetsLoaded = true;
     }
 
-    render(selectedEntity, hoveredEntity) {
+    render(selectedEntity, selectedBuilding, hoveredEntity, hoveredBuilding) {
         if (!this.assetsLoaded) return;
         
         this.clearCanvas();
         this.drawBackground();
         
         this.drawResourceNodes(this.world.getResourceNodes());
-        this.drawBuildings(this.world.getBuildings());
+        this.drawBuildings(this.world.getBuildings(), selectedBuilding, hoveredBuilding);
         this.drawRelationships(this.world.getEntities());
         this.drawEntities(this.world.getEntities(), selectedEntity, hoveredEntity);
     }
@@ -78,20 +78,36 @@ export class Renderer {
         this.ctx.globalAlpha = 1;
     }
 
-    drawBuildings(buildings) {
+    drawBuildings(buildings, selectedBuilding, hoveredBuilding) {
         buildings.forEach(building => {
             if (building.type === 'home') {
+                const x = building.x - building.width / 2;
+                const y = building.y - building.height / 2;
+
+                this.ctx.save();
+                this.ctx.translate(building.x, building.y);
+
+                if (selectedBuilding && building.id === selectedBuilding.id) {
+                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+                    this.ctx.fillRect(-building.width/2 - 4, -building.height/2 - 4, building.width + 8, building.height + 8);
+                } else if (hoveredBuilding && building.id === hoveredBuilding.id) {
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    this.ctx.fillRect(-building.width/2 - 2, -building.height/2 - 2, building.width + 4, building.height + 4);
+                }
+                
+                this.ctx.restore();
+
                 this.ctx.fillStyle = '#A1887F';
                 this.ctx.strokeStyle = '#5D4037';
                 this.ctx.lineWidth = 2;
-                this.ctx.fillRect(building.x - 12, building.y - 12, 24, 24);
-                this.ctx.strokeRect(building.x - 12, building.y - 12, 24, 24);
+                this.ctx.fillRect(x, y, building.width, building.height);
+                this.ctx.strokeRect(x, y, building.width, building.height);
 
                 this.ctx.fillStyle = '#795548';
                 this.ctx.beginPath();
-                this.ctx.moveTo(building.x - 14, building.y - 12);
-                this.ctx.lineTo(building.x + 14, building.y - 12);
-                this.ctx.lineTo(building.x, building.y - 22);
+                this.ctx.moveTo(building.x - 14, y);
+                this.ctx.lineTo(building.x + 14, y);
+                this.ctx.lineTo(building.x, y - 10);
                 this.ctx.closePath();
                 this.ctx.fill();
             }

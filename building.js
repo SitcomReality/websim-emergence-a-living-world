@@ -6,6 +6,8 @@ export class Building {
         this.y = y;
         this.type = type;
         this.level = 1;
+        this.width = 24;
+        this.height = 24;
     }
 }
 

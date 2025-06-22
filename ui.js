@@ -4,7 +4,9 @@ export class UI {
     constructor(world) {
         this.world = world;
         this.selectedEntity = null;
+        this.selectedBuilding = null;
         this.hoveredEntity = null;
+        this.hoveredBuilding = null;
 
         this.canvas = document.getElementById('worldCanvas');
         this.renderer = new Renderer(this.canvas, world);
@@ -23,6 +25,19 @@ export class UI {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
+            // Find clicked building
+            const clickedBuilding = this.world.getBuildings().find(building => {
+                return x >= building.x - building.width / 2 &&
+                       x <= building.x + building.width / 2 &&
+                       y >= building.y - building.height / 2 &&
+                       y <= building.y + building.height / 2;
+            });
+
+            if (clickedBuilding) {
+                this.selectBuilding(clickedBuilding);
+                return;
+            }
+
             // Find clicked entity
             const clickedEntity = this.world.getEntities().find(entity => {
                 const dx = entity.x - x;
@@ -33,7 +48,7 @@ export class UI {
             if (clickedEntity) {
                 this.selectEntity(clickedEntity);
             } else {
-                this.deselectEntity();
+                this.deselect();
             }
         });
 
@@ -51,30 +66,60 @@ export class UI {
             if (this.hoveredEntity !== foundEntity) {
                 this.hoveredEntity = foundEntity;
             }
+
+            const foundBuilding = this.world.getBuildings().find(building => {
+                return x >= building.x - building.width / 2 &&
+                       x <= building.x + building.width / 2 &&
+                       y >= building.y - building.height / 2 &&
+                       y <= building.y + building.height / 2;
+            });
+
+            if (this.hoveredBuilding !== foundBuilding) {
+                this.hoveredBuilding = foundBuilding;
+            }
         });
 
         this.canvas.addEventListener('mouseleave', () => {
             this.hoveredEntity = null;
+            this.hoveredBuilding = null;
         });
     }
 
     selectEntity(entity) {
         this.selectedEntity = entity;
-        this.updateSelectedEntityPanel();
+        this.selectedBuilding = null;
+        this.updateSelectionPanel();
     }
 
-    deselectEntity() {
+    selectBuilding(building) {
+        this.selectedBuilding = building;
         this.selectedEntity = null;
-        document.getElementById('selectedEntityPanel').style.display = 'none';
+        this.updateSelectionPanel();
+    }
+
+    deselect() {
+        this.selectedEntity = null;
+        this.selectedBuilding = null;
+        document.getElementById('selectionPanel').style.display = 'none';
+    }
+
+    updateSelectionPanel() {
+        if (this.selectedEntity) {
+            this.updateSelectedEntityPanel();
+        } else if (this.selectedBuilding) {
+            this.updateSelectedBuildingPanel();
+        } else {
+            this.deselect();
+        }
     }
 
     updateSelectedEntityPanel() {
         if (!this.selectedEntity) return;
 
-        const panel = document.getElementById('selectedEntityPanel');
-        const nameEl = document.getElementById('selectedEntityName');
-        const infoEl = document.getElementById('selectedEntityInfo');
-        const statsEl = document.getElementById('selectedEntityStats');
+        const panel = document.getElementById('selectionPanel');
+        const nameEl = document.getElementById('selectionName');
+        const infoEl = document.getElementById('selectionInfo');
+        const statsEl = document.getElementById('selectionStats');
 
         const info = this.selectedEntity.getInfo();
 
@@ -111,17 +156,53 @@ export class UI {
         `;
     }
 
+    updateSelectedBuildingPanel() {
+        if (!this.selectedBuilding) return;
+
+        const panel = document.getElementById('selectionPanel');
+        const nameEl = document.getElementById('selectionName');
+        const infoEl = document.getElementById('selectionInfo');
+        const statsEl = document.getElementById('selectionStats');
+        
+        const building = this.selectedBuilding;
+        const owner = this.world.getEntities().find(e => e.id === building.ownerId);
+
+        panel.style.display = 'block';
+
+        if (owner) {
+            nameEl.textContent = `Home of ${owner.getName()}`;
+            infoEl.innerHTML = `
+                <div style="font-size: 14px;">A modest dwelling. Level ${building.level}</div>
+            `;
+            
+            const resources = owner.getResources();
+            statsEl.innerHTML = `
+                 <div style="margin-top: 10px; font-size: 11px;">
+                    <div>Stored Resources:</div>
+                    <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                        <span>Food: ${resources.food.toFixed(1)}</span>
+                        <span>Water: ${resources.water.toFixed(1)}</span>
+                        <span>Wood: ${resources.wood.toFixed(1)}</span>
+                        <span>Stone: ${resources.stone.toFixed(1)}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+             nameEl.textContent = `Abandoned Home`;
+             infoEl.innerHTML = `This home's owner is no longer around.`;
+             statsEl.innerHTML = '';
+        }
+    }
+
     update() {
         // Main render call
-        this.renderer.render(this.selectedEntity, this.hoveredEntity);
+        this.renderer.render(this.selectedEntity, this.selectedBuilding, this.hoveredEntity, this.hoveredBuilding);
 
         // Update sidebar UI
         this.updateStats();
         this.updateEventLog();
 
-        if (this.selectedEntity) {
-            this.updateSelectedEntityPanel();
-        }
+        this.updateSelectionPanel();
     }
 
     updateStats() {
@@ -151,7 +232,7 @@ export class UI {
     }
 
     reset() {
-        this.deselectEntity();
+        this.deselect();
         this.renderer.clearCanvas();
     }
 
