@@ -166,8 +166,8 @@ export class UI {
             
             // Position carried items around the entity
             const angle = (index / entity.inventoryCapacity) * 2 * Math.PI - (Math.PI / 2);
-            const x = Math.cos(angle) * 12;
-            const y = Math.sin(angle) * 12;
+            const x = Math.cos(angle) * 14; // Increased radius to avoid overlapping sprite
+            const y = Math.sin(angle) * 14;
 
             resourceEl.style.transform = `translate(${x}px, ${y}px)`;
             
