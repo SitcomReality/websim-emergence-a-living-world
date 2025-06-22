@@ -1,5 +1,4 @@
 import { Personality } from './personality.js';
-import { Role } from './role.js';
 import { generateName } from './utils.js';
 import { DecisionMaker } from './behavior/decision_maker.js';
 
