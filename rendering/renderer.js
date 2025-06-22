@@ -40,7 +40,6 @@ export class Renderer {
         
         this.clearCanvas();
         this.drawBackground();
-        this.drawResourceAuras(this.world.getResourceNodes());
         
         this.drawResourceNodes(this.world.getResourceNodes());
         this.drawBuildings(this.world.getBuildings(), selectedBuilding, hoveredBuilding);
@@ -53,8 +52,11 @@ export class Renderer {
     }
     
     drawBackground() {
-        // A more natural, grassy ground color
-        this.ctx.fillStyle = '#94C595';
+        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+        gradient.addColorStop(0, '#a8e6cf');
+        gradient.addColorStop(0.5, '#dcedc8');
+        gradient.addColorStop(1, '#f8bbd9');
+        this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
@@ -70,7 +72,7 @@ export class Renderer {
             this.ctx.fillStyle = colorMap[node.type] || '#ccc';
             this.ctx.globalAlpha = Math.max(0.3, node.amount / node.maxAmount);
             this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
+            this.ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
             this.ctx.fill();
         });
         this.ctx.globalAlpha = 1;
@@ -79,37 +81,113 @@ export class Renderer {
     drawBuildings(buildings, selectedBuilding, hoveredBuilding) {
         buildings.forEach(building => {
             if (building.type === 'home') {
-                const x = building.x - building.width / 2;
-                const y = building.y - building.height / 2;
-
-                this.ctx.save();
-                this.ctx.translate(building.x, building.y);
-
-                if (selectedBuilding && building.id === selectedBuilding.id) {
-                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
-                    this.ctx.fillRect(-building.width/2 - 4, -building.height/2 - 4, building.width + 8, building.height + 8);
-                } else if (hoveredBuilding && building.id === hoveredBuilding.id) {
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    this.ctx.fillRect(-building.width/2 - 2, -building.height/2 - 2, building.width + 4, building.height + 4);
-                }
-                
-                this.ctx.restore();
-
-                this.ctx.fillStyle = '#A1887F';
-                this.ctx.strokeStyle = '#5D4037';
-                this.ctx.lineWidth = 2;
-                this.ctx.fillRect(x, y, building.width, building.height);
-                this.ctx.strokeRect(x, y, building.width, building.height);
-
-                this.ctx.fillStyle = '#795548';
-                this.ctx.beginPath();
-                this.ctx.moveTo(building.x - 14, y);
-                this.ctx.lineTo(building.x + 14, y);
-                this.ctx.lineTo(building.x, y - 10);
-                this.ctx.closePath();
-                this.ctx.fill();
+                this.drawHome(building, selectedBuilding, hoveredBuilding);
+            } else if (building.type === 'storage') {
+                this.drawStorage(building, selectedBuilding, hoveredBuilding);
+            } else if (building.type === 'home_construction_site') {
+                this.drawConstructionSite(building, selectedBuilding, hoveredBuilding);
             }
         });
+    }
+
+    drawBuildingSelection(building, selectedBuilding, hoveredBuilding) {
+        this.ctx.save();
+        this.ctx.translate(building.x, building.y);
+
+        if (selectedBuilding && building.id === selectedBuilding.id) {
+            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, building.width / 2 + 5, 0, 2 * Math.PI);
+            this.ctx.fill();
+        } else if (hoveredBuilding && building.id === hoveredBuilding.id) {
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, building.width / 2 + 3, 0, 2 * Math.PI);
+            this.ctx.fill();
+        }
+        
+        this.ctx.restore();
+    }
+
+    drawHome(building, selectedBuilding, hoveredBuilding) {
+        const x = building.x - building.width / 2;
+        const y = building.y - building.height / 2;
+
+        this.drawBuildingSelection(building, selectedBuilding, hoveredBuilding);
+
+        this.ctx.fillStyle = '#A1887F';
+        this.ctx.strokeStyle = '#5D4037';
+        this.ctx.lineWidth = 2;
+        this.ctx.fillRect(x, y, building.width, building.height);
+        this.ctx.strokeRect(x, y, building.width, building.height);
+
+        this.ctx.fillStyle = '#795548';
+        this.ctx.beginPath();
+        this.ctx.moveTo(building.x - 14, y);
+        this.ctx.lineTo(building.x + 14, y);
+        this.ctx.lineTo(building.x, y - 10);
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
+    drawStorage(building, selectedBuilding, hoveredBuilding) {
+        const x = building.x - building.width / 2;
+        const y = building.y - building.height / 2;
+
+        this.drawBuildingSelection(building, selectedBuilding, hoveredBuilding);
+        
+        this.ctx.fillStyle = '#c7a76c';
+        this.ctx.strokeStyle = '#8d6e63';
+        this.ctx.lineWidth = 2;
+        this.ctx.fillRect(x, y, building.width, building.height);
+        this.ctx.strokeRect(x, y, building.width, building.height);
+    }
+
+    drawConstructionSite(building, selectedBuilding, hoveredBuilding) {
+        const x = building.x - building.width / 2;
+        const y = building.y - building.height / 2;
+
+        this.drawBuildingSelection(building, selectedBuilding, hoveredBuilding);
+        
+        this.ctx.save();
+        this.ctx.translate(building.x, building.y);
+
+        // Cleared ground
+        this.ctx.fillStyle = 'rgba(181, 136, 99, 0.4)'; // light brown
+        this.ctx.beginPath();
+        this.ctx.arc(0, 0, building.width / 2, 0, 2 * Math.PI);
+        this.ctx.fill();
+
+        const progress = building.constructionProgress / building.constructionTotal;
+        
+        if (progress > 0.1) { // Foundation
+            this.ctx.strokeStyle = '#6D4C41';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(-building.width/2 + 2, -building.height/2 + 2, building.width - 4, building.height - 4);
+        }
+
+        if (progress > 0.4) { // Frame
+            this.ctx.fillStyle = '#8D6E63';
+            this.ctx.globalAlpha = (progress - 0.4) / 0.5;
+             // Corner posts
+            this.ctx.fillRect(-building.width/2+2, -building.height/2+2, 4, 4);
+            this.ctx.fillRect(building.width/2-6, -building.height/2+2, 4, 4);
+            this.ctx.fillRect(-building.width/2+2, building.height/2-6, 4, 4);
+            this.ctx.fillRect(building.width/2-6, building.height/2-6, 4, 4);
+        }
+
+        if (progress > 0.8) { // Partial roof
+             this.ctx.globalAlpha = (progress - 0.8) / 0.2;
+             this.ctx.fillStyle = '#795548';
+             this.ctx.beginPath();
+             this.ctx.moveTo(0, -building.height/2 - 5);
+             this.ctx.lineTo(-building.width/2, -building.height/2 + 8);
+             this.ctx.lineTo(building.width/2, -building.height/2 + 8);
+             this.ctx.closePath();
+             this.ctx.fill();
+        }
+
+        this.ctx.restore();
     }
 
     drawRelationships(entities) {
@@ -167,7 +245,7 @@ export class Renderer {
             this.ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
             
             this.drawCarriedResources(entity);
-            
+
             this.ctx.restore();
 
             if (hoveredEntity && entity.id === hoveredEntity.id) {
@@ -215,34 +293,5 @@ export class Renderer {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillText(name, entity.x, entity.y - 22);
-    }
-
-    drawResourceAuras(nodes) {
-        const auraColors = {
-            food: 'rgba(216, 175, 122, 0.2)', // Fertile ground
-            wood: 'rgba(64, 115, 66, 0.25)', // Forest floor
-            stone: 'rgba(128, 128, 128, 0.3)', // Rocky area
-            water: 'rgba(3, 169, 244, 0.2)' // Shallow water
-        };
-        const auraSize = {
-            food: 35,
-            wood: 45,
-            stone: 40,
-            water: 30
-        };
-
-        this.ctx.save();
-        nodes.forEach(node => {
-            if (auraColors[node.type]) {
-                const radius = auraSize[node.type] * (node.amount / node.maxAmount);
-                if (radius < 5) return;
-                
-                this.ctx.fillStyle = auraColors[node.type];
-                this.ctx.beginPath();
-                this.ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-                this.ctx.fill();
-            }
-        });
-        this.ctx.restore();
     }
 }

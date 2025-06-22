@@ -124,6 +124,28 @@
         .entity.explorer { background-image: url('explorer_sprite.png'); }
         .entity.creature { background-image: url('creature_sprite.png'); }
 
+        .building {
+            position: absolute;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 0;
+            transition: all 0.2s ease;
+        }
+
+        .building-storage {
+            width: 18px;
+            height: 18px;
+            background-color: #c7a76c;
+            border: 2px solid #8d6e63;
+            border-radius: 3px;
+        }
+
+        .building-home-construction {
+            width: 28px;
+            height: 28px;
+            border: 1px dashed rgba(0,0,0,0.3);
+            background-color: rgba(139, 69, 19, 0.1); /* transparent brown */
+        }
+
         .building-home {
             position: absolute;
             width: 24px;

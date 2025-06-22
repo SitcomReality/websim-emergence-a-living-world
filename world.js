@@ -38,7 +38,8 @@ export class World {
             const entity = new Entity(
                 Math.random() * (this.width - 40) + 20,
                 Math.random() * (this.height - 40) + 20,
-                this
+                this,
+                i === 0 // Make the first entity have a home for testing/initial state
             );
             this.entities.push(entity);
         }

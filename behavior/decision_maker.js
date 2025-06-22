@@ -9,6 +9,12 @@ export class DecisionMaker {
     decideNextAction() {
         const entity = this.entity;
 
+        // 0. HIGHEST PRIORITY: Establish a home if homeless
+        if (!entity.home) {
+            this.decideActionForHomeless();
+            return;
+        }
+
         // 1. Handle critical state: Full inventory
         if (entity.isInventoryFull()) {
             Actions.depositResources(entity);
@@ -39,6 +45,50 @@ export class DecisionMaker {
         }
 
         // 4. Default action if nothing else is chosen
+        Actions.wander(entity);
+    }
+
+    decideActionForHomeless() {
+        const entity = this.entity;
+
+        // Step 1: Find a home location if we haven't
+        if (!entity.homeLocation) {
+            Actions.findHomeLocation(entity);
+            return;
+        }
+
+        // Step 2: Build a storage shed if we don't have one
+        if (!entity.storageShed) {
+            Actions.buildStorageShed(entity);
+            return;
+        }
+
+        // Step 3: Check if home construction has started
+        let homeConstructionSite = entity.world.buildingManager.getBuildingAt(entity.homeLocation.x, entity.homeLocation.y);
+        if (!homeConstructionSite || homeConstructionSite.ownerId !== entity.id) {
+             // Start construction if we have enough resources in storage
+            if (entity.storageShed.hasSufficientResourcesFor('home')) {
+                entity.world.buildingManager.startHomeConstruction(entity, entity.homeLocation.x, entity.homeLocation.y);
+                // The next decision cycle will pick up construction work
+            } else {
+                // Gather resources for the home
+                const needed = entity.storageShed.getNeededResourcesFor('home');
+                Actions.gatherResource(entity, needed[0]); // Gather the first thing we need
+            }
+            return;
+        }
+
+        // Step 4: Work on the construction site
+        if (homeConstructionSite && homeConstructionSite.type === 'home_construction_site') {
+            if (entity.isInventoryFull()) {
+                Actions.depositResources(entity);
+            } else {
+                Actions.constructBuilding(entity, homeConstructionSite);
+            }
+            return;
+        }
+
+        // Fallback, should not be reached often
         Actions.wander(entity);
     }
 

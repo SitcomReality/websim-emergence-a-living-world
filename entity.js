@@ -3,14 +3,21 @@ import { generateName } from './utils.js';
 import { DecisionMaker } from './behavior/decision_maker.js';
 
 export class Entity {
-    constructor(x, y, world) {
+    constructor(x, y, world, hasHome = false) {
         this.id = Math.random().toString(36).substring(2, 9);
         this.x = x;
         this.y = y;
         this.world = world;
         this.name = generateName();
         
-        this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
+        this.home = null;
+        this.storageShed = null;
+        this.homeLocation = null; // Planned {x, y} for home
+
+        if (hasHome) {
+            this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
+            this.homeLocation = { x: this.home.x, y: this.home.y };
+        }
 
         this.personality = new Personality();
         this.decisionMaker = new DecisionMaker(this);
@@ -44,11 +51,16 @@ export class Entity {
     }
 
     get homeX() {
-        return this.home.x;
+        return this.home ? this.home.x : (this.homeLocation ? this.homeLocation.x : null);
     }
 
     get homeY() {
-        return this.home.y;
+        return this.home ? this.home.y : (this.homeLocation ? this.homeLocation.y : null);
+    }
+
+    getDepositPoint() {
+        // Priority: Home > Storage Shed
+        return this.home || this.storageShed;
     }
 
     update(deltaTime) {
@@ -70,9 +82,19 @@ export class Entity {
             this.gatherFromTargetNode();
         }
 
-        // If returning home to deposit, check if arrived
-        if (this.currentTask === 'depositing' && this.isAtHome()) {
+        // If returning to deposit, check if arrived
+        if (this.currentTask === 'depositing' && this.targetNode && this.isAtTarget()) {
             this.finishDepositing();
+        }
+
+        // If at home location to build storage
+        if (this.currentTask === 'building storage' && this.isAtHome()) {
+            this.finishBuildingStorageShed();
+        }
+
+        // If at a construction site, do work
+        if (this.currentTask.startsWith('constructing') && this.targetNode && this.isAtTarget()) {
+            this.workOnConstruction();
         }
         
         // Decay energy and happiness slightly
@@ -87,9 +109,12 @@ export class Entity {
     }
 
     isAtHome() {
-        const dx = this.homeX - this.x;
-        const dy = this.homeY - this.y;
-        return Math.sqrt(dx * dx + dy * dy) < 5;
+        const hx = this.homeX;
+        const hy = this.homeY;
+        if (hx === null || hy === null) return false;
+        const dx = hx - this.x;
+        const dy = hy - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < 15; // A bit larger radius for home area
     }
 
     moveTowardsTarget(deltaTime) {
@@ -105,6 +130,10 @@ export class Entity {
             // Reached target
             if (this.currentTask === 'wandering' || this.currentTask === 'exploring') {
                  this.currentTask = 'idle';
+            }
+            if (this.targetNode) {
+                this.x = this.targetX;
+                this.y = this.targetY;
             }
         }
     }
@@ -142,6 +171,47 @@ export class Entity {
         this.decisionMaker.decideNextAction();
     }
 
+    finishBuildingStorageShed() {
+        if (!this.homeLocation || this.storageShed) return;
+
+        const woodNeeded = 1;
+        let woodAvailable = this.getCarriedResourceAmount('wood');
+        
+        if (woodAvailable < woodNeeded) {
+             woodAvailable += this.resources.wood;
+        }
+
+        if (woodAvailable >= woodNeeded) {
+            this.useResource('wood', woodNeeded);
+
+            const shed = this.world.buildingManager.createStorageShed(this.id, this.homeLocation.x, this.homeLocation.y);
+            this.storageShed = shed;
+            this.world.eventSystem.addEvent(`${this.name} built a storage shed.`);
+            this.currentTask = 'idle';
+        } else {
+            // This should not happen if logic is correct, but as a fallback:
+            this.currentTask = 'gathering for shed';
+        }
+    }
+
+    workOnConstruction() {
+        const site = this.targetNode;
+        if (!site || !site.type.endsWith('_construction_site')) {
+            this.currentTask = 'idle';
+            return;
+        }
+
+        const workAmount = 1; // Amount of "work" done per visit
+        const completed = this.world.buildingManager.advanceConstruction(site, workAmount);
+
+        if (completed) {
+            this.world.eventSystem.addEvent(`${this.name} finished building their home!`);
+            this.home = completed;
+            this.currentTask = 'idle';
+        }
+        // stay here to work more on next cycle
+    }
+
     isInventoryFull() {
         let carriedAmount = 0;
         this.inventory.forEach(item => carriedAmount += item.amount);
@@ -154,21 +224,37 @@ export class Entity {
             return;
         };
 
-        this.targetX = this.homeX;
-        this.targetY = this.homeY;
-        this.targetNode = null;
-        this.currentTask = 'depositing';
+        const depositPoint = this.getDepositPoint();
+        if (depositPoint) {
+            this.targetX = depositPoint.x;
+            this.targetY = depositPoint.y;
+            this.targetNode = depositPoint;
+            this.currentTask = 'depositing';
+        } else {
+            // Cannot deposit, so maybe drop items or just wander?
+            this.currentTask = 'idle';
+        }
     }
 
     finishDepositing() {
         if (this.inventory.length === 0) return;
 
-        this.inventory.forEach(item => {
-            this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
-            this.resources[item.type] = Math.round(this.resources[item.type] * 10) / 10;
-        });
-        const storedItems = this.inventory.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
-        this.world.eventSystem.addEvent(`${this.name} stored ${storedItems} at home.`);
+        const depositPoint = this.targetNode;
+        if (!depositPoint || !(depositPoint instanceof Object) || !('inventory' in depositPoint)) {
+             // Depositing to self if no valid building target
+             this.inventory.forEach(item => {
+                this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
+             });
+             this.world.eventSystem.addEvent(`${this.name} stored items in their personal supply.`);
+        } else {
+            // Deposit into a building (shed or home)
+            this.inventory.forEach(item => {
+                depositPoint.inventory[item.type] = (depositPoint.inventory[item.type] || 0) + item.amount;
+            });
+            const storedItems = this.inventory.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
+            this.world.eventSystem.addEvent(`${this.name} stored ${storedItems} at their ${depositPoint.type}.`);
+        }
+        
         this.inventory = [];
         this.currentTask = 'idle';
     }
@@ -293,17 +379,58 @@ export class Entity {
         if (this.resources.water < 3) needs.push('water');
         
         // Resource needs for potential crafting/building (less urgent)
-        if (this.resources.wood < 2) needs.push('wood');
+        if (!this.home) {
+            if (!this.storageShed) {
+                 if (this.getCarriedResourceAmount('wood') < 1) needs.push('wood');
+            } else {
+                const needed = this.storageShed.getNeededResourcesFor('home');
+                if (needed.length > 0) needs.push(...needed);
+            }
+        } else if (this.resources.wood < 2) needs.push('wood');
         if (this.resources.stone < 2) needs.push('stone');
 
-        return needs;
+        // Return unique needs
+        return [...new Set(needs)];
     }
 
     getResources() {
-        return { ...this.resources };
+        // Combines personal and storage resources if available
+        const total = { ...this.resources };
+        const depositPoint = this.getDepositPoint();
+        if (depositPoint && depositPoint.inventory) {
+            for(const type in depositPoint.inventory) {
+                total[type] = (total[type] || 0) + depositPoint.inventory[type];
+            }
+        }
+        return total;
+    }
+
+    getCarriedResourceAmount(type) {
+        const item = this.inventory.find(i => i.type === type);
+        return item ? item.amount : 0;
+    }
+
+    useResource(type, amount) {
+        // Use carried resources first, then stored ones.
+        const carried = this.getCarriedResourceAmount(type);
+        if (carried >= amount) {
+            const item = this.inventory.find(i => i.type === type);
+            item.amount -= amount;
+            if (item.amount <= 0) this.inventory = this.inventory.filter(i => i.type !== type);
+            return;
+        }
+
+        let remainingNeeded = amount - carried;
+        if(carried > 0) {
+             this.inventory = this.inventory.filter(i => i.type !== type);
+        }
+
+        // Now use stored resources
+        this.resources[type] = Math.max(0, this.resources[type] - remainingNeeded);
     }
 
     giveResource(type, amount) {
+        // This is for trading, uses home resources
         this.resources[type] = Math.max(0, this.resources[type] - amount);
         this.resources[type] = Math.round(this.resources[type] * 10) / 10;
     }
@@ -335,7 +462,7 @@ export class Entity {
         return {
             name: this.name,
             personality: this.personality.getDescription(),
-            resources: this.resources,
+            resources: this.getResources(),
             inventory: this.inventory,
             task: this.currentTask,
             energy: Math.round(this.energy),

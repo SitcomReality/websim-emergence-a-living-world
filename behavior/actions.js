@@ -11,6 +11,50 @@ export function wander(entity) {
     entity.targetY = Math.max(20, Math.min(entity.world.height - 20, entity.targetY));
 }
 
+export function findHomeLocation(entity) {
+    entity.currentTask = 'finding a home location';
+    // Simplified logic: find a good spot near resources, not too close to others.
+    // This could be a complex scoring system in the future.
+    const bestSpot = entity.world.buildingManager.findBestBuildLocation(entity);
+
+    if (bestSpot) {
+        entity.homeLocation = { x: bestSpot.x, y: bestSpot.y };
+        entity.world.eventSystem.addEvent(`${entity.getName()} has chosen a location for a new home.`);
+        // Immediately transition to building a storage shed
+        buildStorageShed(entity);
+    } else {
+        // Can't find a spot, wander and try again later
+        wander(entity);
+    }
+}
+
+export function buildStorageShed(entity) {
+    if (!entity.homeLocation) {
+        findHomeLocation(entity);
+        return;
+    }
+
+    const woodNeeded = 1;
+    if (entity.resources.wood >= woodNeeded || entity.getCarriedResourceAmount('wood') >= woodNeeded) {
+        // We have the wood, now go to the location and build
+        entity.targetX = entity.homeLocation.x;
+        entity.targetY = entity.homeLocation.y;
+        entity.currentTask = 'building storage';
+
+    } else {
+        // Need to gather wood first
+        entity.currentTask = 'gathering for shed';
+        gatherResource(entity, 'wood');
+    }
+}
+
+export function constructBuilding(entity, building) {
+     entity.targetX = building.x;
+     entity.targetY = building.y;
+     entity.targetNode = building; // Target the construction site
+     entity.currentTask = `constructing ${building.type.replace('_construction_site', '')}`;
+}
+
 export function gatherResource(entity, resourceType) {
     const targetNode = entity.findClosestResourceNode(resourceType);
     if (targetNode) {
@@ -30,10 +74,16 @@ export function depositResources(entity) {
         return;
     };
 
-    entity.targetX = entity.homeX;
-    entity.targetY = entity.homeY;
-    entity.targetNode = null;
-    entity.currentTask = 'depositing';
+    const depositPoint = entity.getDepositPoint();
+    if (depositPoint) {
+        entity.targetX = depositPoint.x;
+        entity.targetY = depositPoint.y;
+        entity.targetNode = depositPoint; // Can be a building
+        entity.currentTask = 'depositing';
+    } else {
+        // This case should ideally not be hit if logic is correct
+        entity.currentTask = 'idle';
+    }
 }
 
 export function explore(entity) {

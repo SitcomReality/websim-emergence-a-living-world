@@ -27,10 +27,10 @@ export class UI {
 
             // Find clicked building
             const clickedBuilding = this.world.getBuildings().find(building => {
-                return x >= building.x - building.width / 2 &&
-                       x <= building.x + building.width / 2 &&
-                       y >= building.y - building.height / 2 &&
-                       y <= building.y + building.height / 2;
+                const range = building.width / 2 + 2;
+                const dx = building.x - x;
+                const dy = building.y - y;
+                return Math.sqrt(dx * dx + dy * dy) < range;
             });
 
             if (clickedBuilding) {
@@ -68,10 +68,10 @@ export class UI {
             }
 
             const foundBuilding = this.world.getBuildings().find(building => {
-                return x >= building.x - building.width / 2 &&
-                       x <= building.x + building.width / 2 &&
-                       y >= building.y - building.height / 2 &&
-                       y <= building.y + building.height / 2;
+                const range = building.width / 2 + 2;
+                const dx = building.x - x;
+                const dy = building.y - y;
+                return Math.sqrt(dx * dx + dy * dy) < range;
             });
 
             if (this.hoveredBuilding !== foundBuilding) {
@@ -131,7 +131,7 @@ export class UI {
         `;
 
         const inventoryText = info.inventory.length > 0
-            ? info.inventory.map(item => `${item.amount} ${item.type}`).join(', ')
+            ? info.inventory.map(item => `${item.amount.toFixed(1)} ${item.type}`).join(', ')
             : 'nothing';
 
         statsEl.innerHTML = `
@@ -143,7 +143,7 @@ export class UI {
                     <div>Relationships: ${info.relationships}</div>
                 </div>
                 <div style="margin-top: 8px; font-size: 11px;">
-                    <div>Resources (at home):</div>
+                    <div>Resources (at home/storage):</div>
                     <div style="margin-left: 10px;">
                         Food: ${info.resources.food.toFixed(1)}, Water: ${info.resources.water.toFixed(1)}<br>
                         Wood: ${info.resources.wood.toFixed(1)}, Stone: ${info.resources.stone.toFixed(1)}
@@ -170,12 +170,27 @@ export class UI {
         panel.style.display = 'block';
 
         if (owner) {
-            nameEl.textContent = `Home of ${owner.getName()}`;
-            infoEl.innerHTML = `
-                <div style="font-size: 14px;">A modest dwelling. Level ${building.level}</div>
-            `;
-            
-            const resources = owner.getResources();
+            nameEl.textContent = `${building.type.replace('_', ' ')} of ${owner.getName()}`;
+        } else {
+             nameEl.textContent = `Abandoned ${building.type.replace('_', ' ')}`;
+        }
+
+        if (building.type === 'home') {
+            this.displayHomeInfo(building, owner);
+        } else if (building.type === 'storage') {
+            this.displayStorageInfo(building, owner);
+        } else if (building.type === 'home_construction_site') {
+            this.displayConstructionInfo(building, owner);
+        }
+    }
+    
+    displayHomeInfo(building, owner) {
+        const infoEl = document.getElementById('selectionInfo');
+        const statsEl = document.getElementById('selectionStats');
+        infoEl.innerHTML = `<div style="font-size: 14px;">A modest dwelling. Level ${building.level}</div>`;
+        
+        if(owner) {
+            const resources = building.inventory;
             statsEl.innerHTML = `
                  <div style="margin-top: 10px; font-size: 11px;">
                     <div>Stored Resources:</div>
@@ -188,10 +203,48 @@ export class UI {
                 </div>
             `;
         } else {
-             nameEl.textContent = `Abandoned Home`;
-             infoEl.innerHTML = `This home's owner is no longer around.`;
-             statsEl.innerHTML = '';
+            statsEl.innerHTML = '<div style="font-size: 12px; margin-top: 10px;">This home is empty.</div>';
         }
+    }
+
+    displayStorageInfo(building, owner) {
+        const infoEl = document.getElementById('selectionInfo');
+        const statsEl = document.getElementById('selectionStats');
+        infoEl.innerHTML = `<div style="font-size: 14px;">A simple storage shed.</div>`;
+        
+        if(owner) {
+            const resources = building.inventory;
+            statsEl.innerHTML = `
+                 <div style="margin-top: 10px; font-size: 11px;">
+                    <div>Stored Resources:</div>
+                    <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                        <span>Food: ${resources.food.toFixed(1)}</span>
+                        <span>Water: ${resources.water.toFixed(1)}</span>
+                        <span>Wood: ${resources.wood.toFixed(1)}</span>
+                        <span>Stone: ${resources.stone.toFixed(1)}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            statsEl.innerHTML = '<div style="font-size: 12px; margin-top: 10px;">This shed is abandoned.</div>';
+        }
+    }
+
+    displayConstructionInfo(building, owner) {
+        const infoEl = document.getElementById('selectionInfo');
+        const statsEl = document.getElementById('selectionStats');
+        const progress = (building.constructionProgress / building.constructionTotal) * 100;
+        infoEl.innerHTML = `<div style="font-size: 14px;">Construction in progress.</div>
+        <div style="font-size: 12px; margin-top: 5px;">Progress: ${progress.toFixed(0)}%</div>`;
+        
+        const needed = building.requiredResources;
+        let neededText = Object.keys(needed).map(k => `${needed[k]} ${k}`).join(', ');
+
+        statsEl.innerHTML = `
+            <div style="margin-top: 10px; font-size: 11px;">
+                <div>Initial materials gathered. Construction can proceed.</div>
+            </div>
+        `;
     }
 
     update() {
