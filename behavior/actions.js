@@ -35,7 +35,9 @@ export function buildStorageShed(entity) {
     }
 
     const woodNeeded = 1;
-    if (entity.resources.wood >= woodNeeded || entity.getCarriedResourceAmount('wood') >= woodNeeded) {
+    const woodAvailable = entity.resources.wood + entity.inventory.getAmount('wood');
+
+    if (woodAvailable >= woodNeeded) {
         // We have the wood, now go to the location and build
         entity.targetX = entity.homeLocation.x;
         entity.targetY = entity.homeLocation.y;
@@ -69,7 +71,7 @@ export function gatherResource(entity, resourceType) {
 }
 
 export function depositResources(entity) {
-    if (entity.inventory.length === 0) {
+    if (entity.inventory.items.length === 0) {
         entity.currentTask = 'idle';
         return;
     };

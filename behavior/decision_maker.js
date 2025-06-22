@@ -148,7 +148,7 @@ export class DecisionMaker {
                     break;
                 case 'socialize':
                     // More likely to socialize if happy and not in urgent need
-                    weight *= personality.traits.sociability * (this.entity.happiness / 50) * 2;
+                    weight *= personality.traits.sociability * (this.entity.vitals.happiness / 50) * 2;
                     break;
                 case 'trade':
                     // Trading is a high-value action

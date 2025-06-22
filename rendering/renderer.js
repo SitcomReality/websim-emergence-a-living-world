@@ -262,8 +262,8 @@ export class Renderer {
             water: '#03A9F4',
         };
 
-        entity.inventory.forEach((item, index) => {
-            const angle = (index / entity.inventoryCapacity) * 2 * Math.PI - (Math.PI / 2);
+        entity.inventory.items.forEach((item, index) => {
+            const angle = (index / entity.inventory.capacity) * 2 * Math.PI - (Math.PI / 2);
             const radius = 14;
             const x = Math.cos(angle) * radius;
             const y = Math.sin(angle) * radius;

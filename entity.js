@@ -1,6 +1,10 @@
 import { Personality } from './personality.js';
 import { generateName } from './utils.js';
 import { DecisionMaker } from './behavior/decision_maker.js';
+import { Inventory } from './entity/components/inventory.js';
+import { Relationships } from './entity/components/relationships.js';
+import { Vitals } from './entity/components/vitals.js';
+import * as ActionHandler from './entity/action_handlers.js';
 
 export class Entity {
     constructor(x, y, world, hasHome = false) {
@@ -17,14 +21,19 @@ export class Entity {
         this.storageShedId = null; // for saving
         this.targetNodeId = null; // for saving
 
+        this.personality = new Personality();
+        this.decisionMaker = new DecisionMaker(this);
+
+        this.inventory = new Inventory();
+        this.relationships = new Relationships();
+        this.vitals = new Vitals();
+
         if (hasHome) {
             this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
             this.homeLocation = { x: this.home.x, y: this.home.y };
         }
 
-        this.personality = new Personality();
-        this.decisionMaker = new DecisionMaker(this);
-        
+        // Home/personal resource storage
         this.resources = {
             food: Math.floor(Math.random() * 5) + 2,
             wood: Math.floor(Math.random() * 3) + 1,
@@ -35,14 +44,6 @@ export class Entity {
             this.resources[resource] = Math.round(this.resources[resource] * 10) / 10;
         }
 
-        this.inventory = [];
-        this.inventoryCapacity = 2;
-        
-        this.relationships = new Map();
-        this.energy = 100;
-        this.happiness = 50;
-        this.age = 0;
-        
         this.targetX = x;
         this.targetY = y;
         this.speed = 20;
@@ -74,7 +75,7 @@ export class Entity {
     }
 
     update(deltaTime) {
-        this.age += deltaTime / 1000;
+        this.vitals.update(deltaTime);
         this.actionTimer += deltaTime;
         
         // Move towards target
@@ -89,27 +90,23 @@ export class Entity {
 
         // If at target node, try to gather
         if (this.currentTask.startsWith('gathering') && this.targetNode && this.isAtTarget()) {
-            this.gatherFromTargetNode();
+            ActionHandler.gatherFromTargetNode(this);
         }
 
         // If returning to deposit, check if arrived
         if (this.currentTask === 'depositing' && this.targetNode && this.isAtTarget()) {
-            this.finishDepositing();
+            ActionHandler.finishDepositing(this);
         }
 
         // If at home location to build storage
         if (this.currentTask === 'building storage' && this.isAtHome()) {
-            this.finishBuildingStorageShed();
+            ActionHandler.finishBuildingStorageShed(this);
         }
 
         // If at a construction site, do work
         if (this.currentTask.startsWith('constructing') && this.targetNode && this.isAtTarget()) {
-            this.workOnConstruction();
+            ActionHandler.workOnConstruction(this);
         }
-        
-        // Decay energy and happiness slightly
-        this.energy = Math.max(0, this.energy - (deltaTime / 1000) * 0.1);
-        this.happiness = Math.max(0, this.happiness - (deltaTime / 1000) * 0.05);
     }
 
     isAtTarget() {
@@ -181,92 +178,8 @@ export class Entity {
         this.decisionMaker.decideNextAction();
     }
 
-    finishBuildingStorageShed() {
-        if (!this.homeLocation || this.storageShed) return;
-
-        const woodNeeded = 1;
-        let woodAvailable = this.getCarriedResourceAmount('wood');
-        
-        if (woodAvailable < woodNeeded) {
-             woodAvailable += this.resources.wood;
-        }
-
-        if (woodAvailable >= woodNeeded) {
-            this.useResource('wood', woodNeeded);
-
-            const shed = this.world.buildingManager.createStorageShed(this.id, this.homeLocation.x, this.homeLocation.y);
-            this.storageShed = shed;
-            this.world.eventSystem.addEvent(`${this.name} built a storage shed.`);
-            this.currentTask = 'idle';
-        } else {
-            // This should not happen if logic is correct, but as a fallback:
-            this.currentTask = 'gathering for shed';
-        }
-    }
-
-    workOnConstruction() {
-        const site = this.targetNode;
-        if (!site || !site.type.endsWith('_construction_site')) {
-            this.currentTask = 'idle';
-            return;
-        }
-
-        const workAmount = 1; // Amount of "work" done per visit
-        const completed = this.world.buildingManager.advanceConstruction(site, workAmount);
-
-        if (completed) {
-            this.world.eventSystem.addEvent(`${this.name} finished building their home!`);
-            this.home = completed;
-            this.currentTask = 'idle';
-        }
-        // stay here to work more on next cycle
-    }
-
     isInventoryFull() {
-        let carriedAmount = 0;
-        this.inventory.forEach(item => carriedAmount += item.amount);
-        return carriedAmount >= this.inventoryCapacity;
-    }
-
-    startDepositing() {
-        if (this.inventory.length === 0) {
-            this.currentTask = 'idle';
-            return;
-        };
-
-        const depositPoint = this.getDepositPoint();
-        if (depositPoint) {
-            this.targetX = depositPoint.x;
-            this.targetY = depositPoint.y;
-            this.targetNode = depositPoint;
-            this.currentTask = 'depositing';
-        } else {
-            // Cannot deposit, so maybe drop items or just wander?
-            this.currentTask = 'idle';
-        }
-    }
-
-    finishDepositing() {
-        if (this.inventory.length === 0) return;
-
-        const depositPoint = this.targetNode;
-        if (!depositPoint || !(depositPoint instanceof Object) || !('inventory' in depositPoint)) {
-             // Depositing to self if no valid building target
-             this.inventory.forEach(item => {
-                this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
-             });
-             this.world.eventSystem.addEvent(`${this.name} stored items in their personal supply.`);
-        } else {
-            // Deposit into a building (shed or home)
-            this.inventory.forEach(item => {
-                depositPoint.inventory[item.type] = (depositPoint.inventory[item.type] || 0) + item.amount;
-            });
-            const storedItems = this.inventory.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
-            this.world.eventSystem.addEvent(`${this.name} stored ${storedItems} at their ${depositPoint.type}.`);
-        }
-        
-        this.inventory = [];
-        this.currentTask = 'idle';
+        return this.inventory.isFull();
     }
 
     findClosestResourceNode(resourceType) {
@@ -391,7 +304,7 @@ export class Entity {
         // Resource needs for potential crafting/building (less urgent)
         if (!this.home) {
             if (!this.storageShed) {
-                 if (this.getCarriedResourceAmount('wood') < 1) needs.push('wood');
+                 if (this.getCarriedResourceAmount('wood') + this.resources.wood < 1) needs.push('wood');
             } else {
                 const needed = this.storageShed.getNeededResourcesFor('home');
                 if (needed.length > 0) needs.push(...needed);
@@ -416,27 +329,27 @@ export class Entity {
     }
 
     getCarriedResourceAmount(type) {
-        const item = this.inventory.find(i => i.type === type);
-        return item ? item.amount : 0;
+        return this.inventory.getAmount(type);
     }
 
     useResource(type, amount) {
         // Use carried resources first, then stored ones.
         const carried = this.getCarriedResourceAmount(type);
         if (carried >= amount) {
-            const item = this.inventory.find(i => i.type === type);
-            item.amount -= amount;
-            if (item.amount <= 0) this.inventory = this.inventory.filter(i => i.type !== type);
+            this.inventory.use(type, amount);
             return;
         }
 
-        let remainingNeeded = amount - carried;
-        if(carried > 0) {
-             this.inventory = this.inventory.filter(i => i.type !== type);
+        let remainingNeeded = amount;
+        if (carried > 0) {
+            remainingNeeded -= carried;
+            this.inventory.use(type, carried);
         }
 
-        // Now use stored resources
-        this.resources[type] = Math.max(0, this.resources[type] - remainingNeeded);
+        // Now use home/personal stored resources
+        if (this.resources[type] && this.resources[type] >= remainingNeeded) {
+            this.resources[type] = Math.max(0, this.resources[type] - remainingNeeded);
+        }
     }
 
     giveResource(type, amount) {
@@ -451,17 +364,11 @@ export class Entity {
     }
 
     updateRelationship(entityId, change) {
-        const current = this.relationships.get(entityId) || 0;
-        const newValue = Math.max(-1, Math.min(1, current + change));
-        this.relationships.set(entityId, newValue);
+        this.relationships.update(entityId, change);
     }
 
     getRelationships() {
-        return Array.from(this.relationships.entries()).map(([id, value]) => ({
-            targetId: id,
-            value: value,
-            type: value > 0.3 ? 'friendship' : value < -0.3 ? 'rivalry' : 'neutral'
-        }));
+        return this.relationships.get();
     }
 
     getName() {
@@ -473,12 +380,12 @@ export class Entity {
             name: this.name,
             personality: this.personality.getDescription(),
             resources: this.getResources(),
-            inventory: this.inventory,
+            inventory: this.inventory.items,
             task: this.currentTask,
-            energy: Math.round(this.energy),
-            happiness: Math.round(this.happiness),
-            age: Math.round(this.age),
-            relationships: this.getRelationships().filter(r => r.type !== 'neutral').length
+            energy: Math.round(this.vitals.energy),
+            happiness: Math.round(this.vitals.happiness),
+            age: Math.round(this.vitals.age),
+            relationships: this.relationships.getNonNeutralCount()
         };
     }
 
@@ -493,11 +400,9 @@ export class Entity {
             homeLocation: this.homeLocation,
             personality: this.personality.traits,
             resources: this.resources,
-            inventory: this.inventory,
-            relationships: Array.from(this.relationships.entries()),
-            energy: this.energy,
-            happiness: this.happiness,
-            age: this.age,
+            inventory: this.inventory.serialize(),
+            relationships: this.relationships.serialize(),
+            vitals: this.vitals.serialize(),
             targetX: this.targetX,
             targetY: this.targetY,
             targetNodeId: this.targetNode ? this.targetNode.id : null,
@@ -516,10 +421,6 @@ export class Entity {
             name: data.name,
             homeLocation: data.homeLocation,
             resources: data.resources,
-            inventory: data.inventory,
-            energy: data.energy,
-            happiness: data.happiness,
-            age: data.age,
             targetX: data.targetX,
             targetY: data.targetY,
             currentTask: data.currentTask,
@@ -529,7 +430,9 @@ export class Entity {
 
         // Complex properties that need reconstruction/linking
         this.personality.traits = data.personality;
-        this.relationships = new Map(data.relationships);
+        this.inventory.deserialize(data.inventory);
+        this.relationships.deserialize(data.relationships);
+        this.vitals.deserialize(data.vitals);
 
         // Store IDs for linking after all objects are created
         this.homeId = data.homeId;

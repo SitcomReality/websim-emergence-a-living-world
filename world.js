@@ -126,8 +126,8 @@ export class World {
                         this.eventSystem.addEvent(`${entity1.getName()} traded ${tradeAmount} ${give} for ${tradeAmount} ${need} with ${entity2.getName()}`);
                         
                         // Update happiness after a successful trade
-                        entity1.happiness = Math.min(100, entity1.happiness + 15);
-                        entity2.happiness = Math.min(100, entity2.happiness + 15);
+                        entity1.vitals.increaseHappiness(15);
+                        entity2.vitals.increaseHappiness(15);
 
                         return true;
                     }
