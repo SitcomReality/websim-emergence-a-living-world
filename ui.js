@@ -272,8 +272,11 @@ export class UI {
         const hour = Math.floor(time);
         const minutes = Math.floor((time % 1) * 60);
         const timeString = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        document.getElementById('tradeCount').previousElementSibling.textContent = 'Time';
-        document.getElementById('tradeCount').textContent = timeString;
+        
+        const timeValueEl = document.getElementById('timeValue');
+        if (timeValueEl) {
+            timeValueEl.textContent = timeString;
+        }
 
         // Update resource counts
         const resourceTotals = this.world.resourceManager.getTotalResources();
