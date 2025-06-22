@@ -53,30 +53,101 @@ export class Renderer {
     }
     
     drawBackground() {
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-        gradient.addColorStop(0, '#a8e6cf');
-        gradient.addColorStop(0.5, '#dcedc8');
-        gradient.addColorStop(1, '#f8bbd9');
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        gradient.addColorStop(0, '#134E5E'); // Deep jungle blue-green
+        gradient.addColorStop(1, '#71B280'); // Lighter, leafy green
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
     drawResourceNodes(nodes) {
-        const colorMap = {
-            food: '#8BC34A',
-            wood: '#795548',
-            stone: '#607D8B',
-            water: '#03A9F4'
-        };
-        
         nodes.forEach(node => {
-            this.ctx.fillStyle = colorMap[node.type] || '#ccc';
             this.ctx.globalAlpha = Math.max(0.3, node.amount / node.maxAmount);
-            this.ctx.beginPath();
-            this.ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
-            this.ctx.fill();
+            switch(node.type) {
+                case 'food':
+                    this.drawFoodNode(node);
+                    break;
+                case 'wood':
+                    this.drawWoodNode(node);
+                    break;
+                case 'stone':
+                    this.drawStoneNode(node);
+                    break;
+                case 'water':
+                    this.drawWaterNode(node);
+                    break;
+                default:
+                    this.ctx.fillStyle = '#ccc';
+                    this.ctx.beginPath();
+                    this.ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
+                    this.ctx.fill();
+            }
         });
         this.ctx.globalAlpha = 1;
+    }
+
+    drawFoodNode(node) {
+        // Bush-like structure
+        this.ctx.fillStyle = '#1B5E20'; // Dark green base
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y, 7, 0, 2 * Math.PI);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#4CAF50'; // Lighter green leaves
+        this.ctx.beginPath();
+        this.ctx.arc(node.x + 3, node.y - 3, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(node.x - 3, node.y - 2, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y + 3, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+
+    drawWoodNode(node) {
+        // Tree: trunk and canopy
+        const trunkWidth = 4;
+        const trunkHeight = 10;
+        this.ctx.fillStyle = '#5D4037'; // Brown trunk
+        this.ctx.fillRect(node.x - trunkWidth / 2, node.y, trunkWidth, trunkHeight);
+
+        this.ctx.fillStyle = '#388E3C'; // Dark green canopy
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+
+    drawStoneNode(node) {
+        // Rock-like shape
+        this.ctx.fillStyle = '#757575'; // Grey stone
+        this.ctx.beginPath();
+        this.ctx.moveTo(node.x - 6, node.y + 4);
+        this.ctx.lineTo(node.x - 5, node.y - 5);
+        this.ctx.lineTo(node.x + 2, node.y - 6);
+        this.ctx.lineTo(node.x + 7, node.y - 2);
+        this.ctx.lineTo(node.x + 5, node.y + 5);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // Mossy highlight
+        this.ctx.fillStyle = 'rgba(76, 175, 80, 0.5)';
+        this.ctx.beginPath();
+        this.ctx.arc(node.x + 2, node.y - 2, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+
+    drawWaterNode(node) {
+        // Puddle of water
+        this.ctx.fillStyle = '#0097A7'; // Darker cyan
+        this.ctx.beginPath();
+        this.ctx.ellipse(node.x, node.y, 8, 6, 0, 0, 2 * Math.PI);
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#4DD0E1'; // Lighter cyan highlight
+        this.ctx.beginPath();
+        this.ctx.ellipse(node.x + 1, node.y - 1, 4, 2.5, 0, 0, 2 * Math.PI);
+        this.ctx.fill();
     }
 
     drawBuildings(buildings, selectedBuilding, hoveredBuilding) {
@@ -154,7 +225,7 @@ export class Renderer {
         this.ctx.translate(building.x, building.y);
 
         // Cleared ground
-        this.ctx.fillStyle = 'rgba(181, 136, 99, 0.4)'; // light brown
+        this.ctx.fillStyle = 'rgba(93, 64, 55, 0.4)'; // dark muddy brown
         this.ctx.beginPath();
         this.ctx.arc(0, 0, building.width / 2, 0, 2 * Math.PI);
         this.ctx.fill();
