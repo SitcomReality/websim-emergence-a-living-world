@@ -84,7 +84,7 @@ export class Entity {
     isAtTarget() {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
-        return Math.sqrt(dx * dx + dy * dy) < 2;
+        return Math.sqrt(dx * dx + dy * dy) < 5;
     }
 
     isAtHome() {
