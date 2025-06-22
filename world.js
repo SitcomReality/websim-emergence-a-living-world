@@ -1,12 +1,14 @@
 import { Entity } from './entity.js';
 import { ResourceManager } from './resource.js';
 import { EventSystem } from './events.js';
+import { BuildingManager } from './building.js';
 
 export class World {
     constructor() {
         this.entities = [];
         this.resourceManager = new ResourceManager();
         this.eventSystem = new EventSystem();
+        this.buildingManager = new BuildingManager(this);
         this.width = 800;
         this.height = 600;
         this.cycleCount = 0;
@@ -16,8 +18,8 @@ export class World {
 
     initialize() {
         this.reset();
-        this.generateInitialEntities();
         this.resourceManager.generateResources(this.width, this.height);
+        this.generateInitialEntities();
     }
 
     reset() {
@@ -26,6 +28,7 @@ export class World {
         this.cycleTimer = 0;
         this.eventSystem.clear();
         this.resourceManager.reset();
+        this.buildingManager.reset();
     }
 
     generateInitialEntities() {
@@ -188,6 +191,10 @@ export class World {
 
     getCycleCount() {
         return this.cycleCount;
+    }
+
+    getBuildings() {
+        return this.buildingManager.getBuildings();
     }
 
     getEvents() {

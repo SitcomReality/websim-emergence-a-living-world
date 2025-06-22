@@ -120,6 +120,29 @@
         .entity.crafter { background-image: url('crafter_sprite.png'); }
         .entity.explorer { background-image: url('explorer_sprite.png'); }
 
+        .building-home {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: #A1887F;
+            border: 2px solid #5D4037;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 0;
+        }
+
+        .building-home::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -2px;
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-bottom: 10px solid #795548;
+        }
+
         .resource-node {
             position: absolute;
             width: 12px;

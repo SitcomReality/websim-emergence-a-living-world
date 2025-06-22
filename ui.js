@@ -4,6 +4,7 @@ export class UI {
         this.selectedEntity = null;
         this.entityElements = new Map();
         this.resourceElements = new Map();
+        this.buildingElements = new Map();
         this.canvas = document.getElementById('worldCanvas');
         this.relationshipSvg = document.getElementById('relationshipSvg');
         
@@ -109,6 +110,7 @@ export class UI {
     }
 
     update() {
+        this.updateBuildings();
         this.updateEntities();
         this.updateResources();
         this.updateRelationships();
@@ -118,6 +120,38 @@ export class UI {
         if (this.selectedEntity) {
             this.updateSelectedEntityPanel();
         }
+    }
+
+    updateBuildings() {
+        const buildings = this.world.getBuildings();
+
+        // Remove buildings that no longer exist
+        for (const [id, element] of this.buildingElements) {
+            if (!buildings.find(b => b.id === id)) {
+                element.remove();
+                this.buildingElements.delete(id);
+            }
+        }
+
+        // Update or create building elements
+        buildings.forEach(building => {
+            let element = this.buildingElements.get(building.id);
+
+            if (!element) {
+                element = document.createElement('div');
+                element.className = `building-home`;
+                this.canvas.appendChild(element);
+                this.buildingElements.set(building.id, element);
+            }
+
+            element.style.left = `${building.x - 12}px`;
+            element.style.top = `${building.y - 12}px`;
+
+            const owner = this.world.getEntities().find(e => e.id === building.ownerId);
+            if (owner) {
+                element.title = `Home of ${owner.name}`;
+            }
+        });
     }
 
     updateEntities() {
@@ -272,8 +306,10 @@ export class UI {
         // Clear all UI elements
         this.entityElements.forEach(element => element.remove());
         this.resourceElements.forEach(element => element.remove());
+        this.buildingElements.forEach(element => element.remove());
         this.entityElements.clear();
         this.resourceElements.clear();
+        this.buildingElements.clear();
         this.relationshipSvg.innerHTML = '';
         this.deselectEntity();
     }

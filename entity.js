@@ -10,8 +10,7 @@ export class Entity {
         this.world = world;
         this.name = generateName();
         
-        this.homeX = x;
-        this.homeY = y;
+        this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
 
         this.personality = new Personality();
         this.role = Role.assignRandomRole();
@@ -39,6 +38,14 @@ export class Entity {
         
         this.actionTimer = 0;
         this.actionInterval = 3000 + Math.random() * 4000;
+    }
+
+    get homeX() {
+        return this.home.x;
+    }
+
+    get homeY() {
+        return this.home.y;
     }
 
     update(deltaTime) {
