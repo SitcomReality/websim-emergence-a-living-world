@@ -188,4 +188,8 @@ export class BuildingManager {
     getBuildings() {
         return this.buildings;
     }
+
+    reset() {
+        this.buildings = [];
+    }
 }
