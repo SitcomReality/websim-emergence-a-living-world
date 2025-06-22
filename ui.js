@@ -98,8 +98,8 @@ export class UI {
                 <div style="margin-top: 8px; font-size: 11px;">
                     <div>Resources (at home):</div>
                     <div style="margin-left: 10px;">
-                        Food: ${info.resources.food}, Water: ${info.resources.water}<br>
-                        Wood: ${info.resources.wood}, Stone: ${info.resources.stone}
+                        Food: ${info.resources.food.toFixed(1)}, Water: ${info.resources.water.toFixed(1)}<br>
+                        Wood: ${info.resources.wood.toFixed(1)}, Stone: ${info.resources.stone.toFixed(1)}
                     </div>
                 </div>
                  <div style="margin-top: 8px; font-size: 11px;">
@@ -239,7 +239,7 @@ export class UI {
             element.style.left = `${node.x - 6}px`;
             element.style.top = `${node.y - 6}px`;
             element.style.opacity = Math.max(0.3, node.amount / node.maxAmount);
-            element.title = `${node.type}: ${Math.round(node.amount)}/${node.maxAmount}`;
+            element.title = `${node.type}: ${node.amount.toFixed(1)}/${node.maxAmount}`;
         });
     }
 

@@ -207,7 +207,7 @@ export class ResourceManager {
             
             return {
                 type: node.type,
-                amount: gathered
+                amount: Math.round(gathered * 10) / 10
             };
         }
         return null;
@@ -217,8 +217,9 @@ export class ResourceManager {
         // Regenerate resources over time
         this.nodes.forEach(node => {
             if (node.amount < node.maxAmount) {
-                node.amount = Math.min(node.maxAmount, 
-                    node.amount + node.regenerationRate * (deltaTime / 1000));
+                const newAmount = node.amount + node.regenerationRate * (deltaTime / 1000);
+                node.amount = Math.min(node.maxAmount, newAmount);
+                node.amount = Math.round(node.amount * 10) / 10;
             }
         });
         
