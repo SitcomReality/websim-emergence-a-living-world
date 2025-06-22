@@ -77,8 +77,15 @@ export class UI {
         
         panel.style.display = 'block';
         nameEl.textContent = info.name;
-        infoEl.textContent = `${info.role} - ${info.personality}`;
+        infoEl.innerHTML = `
+            ${info.role} - ${info.personality}<br>
+            <span style="font-size: 12px; color: rgba(255,255,255,0.7)">Task: ${info.task}</span>
+        `;
         
+        const inventoryText = info.inventory.length > 0
+            ? info.inventory.map(item => `${item.amount} ${item.type}`).join(', ')
+            : 'nothing';
+
         statsEl.innerHTML = `
             <div style="margin-top: 10px;">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 12px;">
@@ -88,11 +95,14 @@ export class UI {
                     <div>Relationships: ${info.relationships}</div>
                 </div>
                 <div style="margin-top: 8px; font-size: 11px;">
-                    <div>Resources:</div>
+                    <div>Resources (at home):</div>
                     <div style="margin-left: 10px;">
                         Food: ${info.resources.food}, Water: ${info.resources.water}<br>
                         Wood: ${info.resources.wood}, Stone: ${info.resources.stone}
                     </div>
+                </div>
+                 <div style="margin-top: 8px; font-size: 11px;">
+                    <div>Carrying: ${inventoryText}</div>
                 </div>
             </div>
         `;

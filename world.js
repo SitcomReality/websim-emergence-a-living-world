@@ -11,7 +11,7 @@ export class World {
         this.height = 600;
         this.cycleCount = 0;
         this.cycleTimer = 0;
-        this.cycleInterval = 2000; // 2 seconds per cycle
+        this.cycleInterval = 5000; // 5 seconds per cycle
     }
 
     initialize() {
@@ -79,7 +79,10 @@ export class World {
     handleEntityInteraction(entity1, entity2) {
         // Check for trade opportunities
         if (this.canTrade(entity1, entity2)) {
-            this.executeTrade(entity1, entity2);
+            // Lower the probability of random trades to make them more special
+            if (Math.random() < 0.1) {
+                 this.executeTrade(entity1, entity2);
+            }
         }
 
         // Update relationships
@@ -93,8 +96,9 @@ export class World {
         const entity1Has = entity1.getResources();
         const entity2Has = entity2.getResources();
 
-        return entity1Needs.some(need => entity2Has[need] > 0) &&
-               entity2Needs.some(need => entity1Has[need] > 0);
+        // Trade if one has surplus of what the other needs
+        return entity1Needs.some(need => entity2Has[need] > 2) &&
+               entity2Needs.some(need => entity1Has[need] > 2);
     }
 
     executeTrade(entity1, entity2) {
@@ -109,12 +113,18 @@ export class World {
                 for (const give of entity2Needs) {
                     if (entity1Has[give] > 0) {
                         // Execute trade
-                        entity1.giveResource(give, 1);
-                        entity1.receiveResource(need, 1);
-                        entity2.giveResource(need, 1);
-                        entity2.receiveResource(give, 1);
+                        const tradeAmount = 1;
+                        entity1.giveResource(give, tradeAmount);
+                        entity1.receiveResource(need, tradeAmount);
+                        entity2.giveResource(need, tradeAmount);
+                        entity2.receiveResource(give, tradeAmount);
 
-                        this.eventSystem.addEvent(`${entity1.getName()} traded ${give} for ${need} with ${entity2.getName()}`);
+                        this.eventSystem.addEvent(`${entity1.getName()} traded ${tradeAmount} ${give} for ${tradeAmount} ${need} with ${entity2.getName()}`);
+                        
+                        // Update happiness after a successful trade
+                        entity1.happiness = Math.min(100, entity1.happiness + 15);
+                        entity2.happiness = Math.min(100, entity2.happiness + 15);
+
                         return true;
                     }
                 }
@@ -184,4 +194,3 @@ export class World {
         return this.eventSystem.getRecentEvents();
     }
 }
-

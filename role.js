@@ -85,7 +85,7 @@ export class Role {
 
     seekTrades(entity) {
         // Trader actively seeks out other entities for trades
-        const nearbyEntity = entity.findNearbyEntity();
+        const nearbyEntity = entity.findNearbyEntity(100); // larger radius for traders
         if (nearbyEntity && entity.world.canTrade(entity, nearbyEntity)) {
             entity.world.executeTrade(entity, nearbyEntity);
         }
@@ -113,4 +113,3 @@ export class Role {
         return this.needs.filter(need => entity.resources[need] < 3);
     }
 }
-

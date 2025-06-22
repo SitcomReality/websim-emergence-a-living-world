@@ -10,6 +10,9 @@ export class Entity {
         this.world = world;
         this.name = generateName();
         
+        this.homeX = x;
+        this.homeY = y;
+
         this.personality = new Personality();
         this.role = Role.assignRandomRole();
         
@@ -32,9 +35,10 @@ export class Entity {
         this.targetY = y;
         this.speed = 20;
         this.targetNode = null;
+        this.currentTask = 'idle';
         
         this.actionTimer = 0;
-        this.actionInterval = 1000 + Math.random() * 2000;
+        this.actionInterval = 3000 + Math.random() * 4000;
     }
 
     update(deltaTime) {
@@ -48,23 +52,34 @@ export class Entity {
         if (this.actionTimer >= this.actionInterval) {
             this.performAction();
             this.actionTimer = 0;
-            this.actionInterval = 1000 + Math.random() * 2000;
+            this.actionInterval = 3000 + Math.random() * 4000; // Longer interval
         }
 
         // If at target node, try to gather
-        if (this.targetNode && this.isAtTarget()) {
+        if (this.currentTask === 'gathering' && this.targetNode && this.isAtTarget()) {
             this.gatherFromTargetNode();
+        }
+
+        // If returning home to deposit, check if arrived
+        if (this.currentTask === 'depositing' && this.isAtHome()) {
+            this.finishDepositing();
         }
         
         // Decay energy and happiness slightly
-        this.energy = Math.max(0, this.energy - deltaTime / 10000);
-        this.happiness = Math.max(0, this.happiness - deltaTime / 20000);
+        this.energy = Math.max(0, this.energy - (deltaTime / 1000) * 0.1);
+        this.happiness = Math.max(0, this.happiness - (deltaTime / 1000) * 0.05);
     }
 
     isAtTarget() {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
         return Math.sqrt(dx * dx + dy * dy) < 2;
+    }
+
+    isAtHome() {
+        const dx = this.homeX - this.x;
+        const dy = this.homeY - this.y;
+        return Math.sqrt(dx * dx + dy * dy) < 5;
     }
 
     moveTowardsTarget(deltaTime) {
@@ -78,14 +93,15 @@ export class Entity {
             this.y += (dy / distance) * moveDistance;
         } else {
             // Reached target
-            if (!this.targetNode) {
-                this.pickNewTarget();
+            if (this.currentTask === 'wandering' && !this.targetNode) {
+                 this.currentTask = 'idle';
             }
         }
     }
 
     pickNewTarget() {
         this.targetNode = null;
+        this.currentTask = 'wandering';
         // Personality influences movement patterns
         if (this.personality.traits.curiosity > 0.7) {
             // Curious entities explore more
@@ -117,7 +133,7 @@ export class Entity {
         const needs = this.getNeeds();
         
         if (this.isInventoryFull()) {
-            this.depositInventory();
+            this.startDepositing();
             return;
         }
 
@@ -128,6 +144,7 @@ export class Entity {
                 this.targetNode = targetNode;
                 this.targetX = targetNode.x;
                 this.targetY = targetNode.y;
+                this.currentTask = 'gathering';
             } else {
                 this.pickNewTarget();
             }
@@ -146,15 +163,28 @@ export class Entity {
         return this.inventory.length >= this.inventoryCapacity;
     }
 
-    depositInventory() {
+    startDepositing() {
+        if (this.inventory.length === 0) {
+            this.currentTask = 'idle';
+            return;
+        };
+
+        this.targetX = this.homeX;
+        this.targetY = this.homeY;
+        this.targetNode = null;
+        this.currentTask = 'depositing';
+    }
+
+    finishDepositing() {
         if (this.inventory.length === 0) return;
 
         this.inventory.forEach(item => {
             this.resources[item.type] = (this.resources[item.type] || 0) + item.amount;
         });
-        this.world.eventSystem.addEvent(`${this.name} stored ${this.inventory.length} items.`);
+        const storedItems = this.inventory.map(i => `${i.amount} ${i.type}`).join(', ');
+        this.world.eventSystem.addEvent(`${this.name} stored ${storedItems} at home.`);
         this.inventory = [];
-        this.pickNewTarget();
+        this.currentTask = 'idle';
     }
 
     findClosestResourceNode(resourceType) {
@@ -177,7 +207,11 @@ export class Entity {
     gatherFromTargetNode() {
         if (!this.targetNode || this.isInventoryFull()) {
             this.targetNode = null;
-            this.pickNewTarget();
+            if (this.isInventoryFull()) {
+                this.startDepositing();
+            } else {
+                this.currentTask = 'idle';
+            }
             return;
         }
 
@@ -185,12 +219,17 @@ export class Entity {
         if (gathered) {
             this.inventory.push(gathered);
             this.energy = Math.min(100, this.energy + 5);
-            this.world.eventSystem.addEvent(`${this.name} gathered ${gathered.amount} ${gathered.type}.`);
+            // Don't log every single gather event to reduce spam.
+            // A "stored" event will be logged later.
         }
 
         if (this.isInventoryFull() || this.targetNode.amount <= 0) {
             this.targetNode = null;
-            this.pickNewTarget();
+            if (this.isInventoryFull()) {
+                this.startDepositing();
+            } else {
+                this.currentTask = 'idle';
+            }
         }
     }
 
@@ -203,7 +242,7 @@ export class Entity {
         
         if (nearbyNodes.length > 0) {
             if (this.isInventoryFull()) {
-                this.depositInventory();
+                this.startDepositing();
                 return;
             }
             const node = nearbyNodes[Math.floor(Math.random() * nearbyNodes.length)];
@@ -211,7 +250,6 @@ export class Entity {
             if (gathered) {
                 this.inventory.push(gathered);
                 this.energy = Math.min(100, this.energy + 5);
-                this.world.eventSystem.addEvent(`${this.name} gathered ${gathered.amount} ${gathered.type}`);
             }
         }
     }
@@ -221,10 +259,11 @@ export class Entity {
         if (nearbyEntity) {
             this.targetX = nearbyEntity.x;
             this.targetY = nearbyEntity.y;
+            this.currentTask = 'socializing';
         }
     }
 
-    findNearbyEntity() {
+    findNearbyEntity(range = 100) {
         const entities = this.world.getEntities().filter(e => e.id !== this.id);
         if (entities.length === 0) return null;
         
@@ -240,7 +279,7 @@ export class Entity {
             }
         }
         
-        return closestDistance < 100 ? closest : null;
+        return closestDistance < range ? closest : null;
     }
 
     performRoleAction() {
@@ -297,10 +336,12 @@ export class Entity {
             role: this.role.name,
             personality: this.personality.getDescription(),
             resources: this.resources,
+            inventory: this.inventory,
+            task: this.currentTask,
             energy: Math.round(this.energy),
             happiness: Math.round(this.happiness),
             age: Math.round(this.age),
-            relationships: this.getRelationships().length
+            relationships: this.getRelationships().filter(r => r.type !== 'neutral').length
         };
     }
 }
