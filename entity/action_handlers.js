@@ -41,25 +41,25 @@ export function workOnConstruction(entity) {
 }
 
 export function finishDepositing(entity) {
-    if (entity.inventory.length === 0) return;
+    if (entity.inventory.items.length === 0) return;
 
     const depositPoint = entity.targetNode;
     if (!depositPoint || !(depositPoint instanceof Object) || !('inventory' in depositPoint)) {
         // Fallback: If no valid building, deposit to personal (home) storage
-        entity.inventory.forEach(item => {
+        entity.inventory.items.forEach(item => {
             entity.resources[item.type] = (entity.resources[item.type] || 0) + item.amount;
         });
         entity.world.eventSystem.addEvent(`${entity.name} stored items in their personal supply.`);
     } else {
         // Deposit into a building (shed or home)
-        entity.inventory.forEach(item => {
+        entity.inventory.items.forEach(item => {
             depositPoint.inventory[item.type] = (depositPoint.inventory[item.type] || 0) + item.amount;
         });
-        const storedItems = entity.inventory.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
+        const storedItems = entity.inventory.items.map(i => `${i.amount.toFixed(1)} ${i.type}`).join(', ');
         entity.world.eventSystem.addEvent(`${entity.name} stored ${storedItems} at their ${depositPoint.type}.`);
     }
 
-    entity.inventory = [];
+    entity.inventory.clear();
     entity.currentTask = 'idle';
 }
 
@@ -76,13 +76,7 @@ export function gatherFromTargetNode(entity) {
 
     const gathered = entity.world.resourceManager.gatherFrom(entity.targetNode);
     if (gathered) {
-        const existingItem = entity.inventory.find(i => i.type === gathered.type);
-        if (existingItem) {
-            existingItem.amount += gathered.amount;
-            existingItem.amount = Math.round(existingItem.amount * 10) / 10;
-        } else {
-            entity.inventory.push(gathered);
-        }
+        entity.inventory.add(gathered);
         entity.energy = Math.min(100, entity.energy + 5);
         // Don't log every single gather event to reduce spam.
     }

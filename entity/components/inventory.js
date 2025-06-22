@@ -20,7 +20,7 @@ export class Inventory {
         if (existingItem) {
             existingItem.amount += item.amount;
             existingItem.amount = Math.round(existingItem.amount * 10) / 10;
-        } else {
+        } else if (this.items.length < 4) { // Prevent carrying more than 4 types of items
             this.items.push(item);
         }
     }
