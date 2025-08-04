@@ -153,7 +153,20 @@ export class Entity {
     }
     
     findClosestResourceNode(resourceType) {
-        const nodes = this.world.getResourceNodes().filter(n => n.type === resourceType && n.amount > 0);
+        // Get all other entities that are currently gathering from a node.
+        const otherEntities = this.world.getEntities().filter(e => e.id !== this.id);
+        const busyNodeIds = new Set();
+        otherEntities.forEach(e => {
+            if (e.task && (e.task.current.startsWith('gathering') || e.task.current.startsWith('Harvesting')) && e.task.targetNode) {
+                busyNodeIds.add(e.task.targetNode.id);
+            }
+        });
+
+        const nodes = this.world.getResourceNodes().filter(n =>
+            n.type === resourceType &&
+            n.amount > 0 &&
+            !busyNodeIds.has(n.id) // Exclude nodes that are currently being worked on
+        );
         if (nodes.length === 0) return null;
 
         let closestNode = null;
