@@ -12,7 +12,7 @@ export class BuildingManager {
         this.buildings.push(home);
         // Transfer resources from owner's personal supply to new home
         home.inventory = { ...entity.resources };
-        entity.resources = { food: 0, water: 0, wood: 0, stone: 0 };
+        entity.resources = { food: 0, wood: 0, stone: 0 };
         return home;
     }
 

@@ -88,7 +88,6 @@
         .carried-resource.food { background: #8BC34A; }
         .carried-resource.wood { background: #795548; }
         .carried-resource.stone { background: #607D8B; }
-        .carried-resource.water { background: #03A9F4; }
 
         .entity:hover {
             transform: scale(1.2);
@@ -196,7 +195,6 @@
         .resource-node.food { background: #8BC34A; }
         .resource-node.wood { background: #795548; }
         .resource-node.stone { background: #607D8B; }
-        .resource-node.water { background: #03A9F4; }
 
         .info-panel {
             background: rgba(255, 255, 255, 0.1);
@@ -331,14 +329,10 @@
                         <div style="color: rgba(255,255,255,0.7);">Trades</div>
                     </div>
                 </div>
-                <div id="resourceStats" class="stats" style="grid-template-columns: repeat(4, 1fr); gap: 5px;">
+                <div id="resourceStats" class="stats" style="grid-template-columns: repeat(3, 1fr); gap: 5px;">
                     <div class="stat">
                         <div style="font-weight: bold;" id="foodCount">0</div>
                         <div style="color: rgba(255,255,255,0.7);">Food</div>
-                    </div>
-                    <div class="stat">
-                        <div style="font-weight: bold;" id="waterCount">0</div>
-                        <div style="color: rgba(255,255,255,0.7);">Water</div>
                     </div>
                     <div class="stat">
                         <div style="font-weight: bold;" id="woodCount">0</div>

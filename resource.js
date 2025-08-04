@@ -1,71 +1,16 @@
 export class ResourceManager {
     constructor() {
         this.nodes = [];
-        this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
+        this.resourceTotals = { food: 0, wood: 0, stone: 0 };
     }
 
     generateResources(worldWidth, worldHeight) {
         this.nodes = [];
         
         // Generate different resource patterns
-        this.generateWaterSources(worldWidth, worldHeight);
         this.generateFoodPatches(worldWidth, worldHeight);
         this.generateForestClusters(worldWidth, worldHeight);
         this.generateStoneVeins(worldWidth, worldHeight);
-    }
-
-    generateWaterSources(worldWidth, worldHeight) {
-        // Create 2-3 water source centers (springs/lakes)
-        const waterCenters = 2 + Math.floor(Math.random() * 2);
-        
-        for (let i = 0; i < waterCenters; i++) {
-            const centerX = Math.random() * worldWidth;
-            const centerY = Math.random() * worldHeight;
-            
-            // Create a cluster around each center
-            const nodesInCluster = 3 + Math.floor(Math.random() * 4);
-            for (let j = 0; j < nodesInCluster; j++) {
-                const angle = (j / nodesInCluster) * Math.PI * 2 + Math.random() * 0.5;
-                const distance = Math.random() * 80;
-                const x = Math.max(20, Math.min(worldWidth - 20, centerX + Math.cos(angle) * distance));
-                const y = Math.max(20, Math.min(worldHeight - 20, centerY + Math.sin(angle) * distance));
-                
-                this.createNode('water', x, y, 4 + Math.floor(Math.random() * 3), 6 + Math.floor(Math.random() * 4));
-                this.updateTotalResources();
-            }
-        }
-        
-        // Create 1-2 rivers (lines of water nodes)
-        const rivers = 1 + Math.floor(Math.random() * 2);
-        for (let i = 0; i < rivers; i++) {
-            this.generateRiver(worldWidth, worldHeight);
-        }
-    }
-
-    generateRiver(worldWidth, worldHeight) {
-        const startX = Math.random() * worldWidth;
-        const startY = Math.random() * worldHeight;
-        const direction = Math.random() * Math.PI * 2;
-        const length = 5 + Math.floor(Math.random() * 8);
-        
-        let currentX = startX;
-        let currentY = startY;
-        let currentDir = direction;
-        
-        for (let i = 0; i < length; i++) {
-            // Add some meandering to the river
-            currentDir += (Math.random() - 0.5) * 0.5;
-            const stepSize = 40 + Math.random() * 30;
-            
-            currentX += Math.cos(currentDir) * stepSize;
-            currentY += Math.sin(currentDir) * stepSize;
-            
-            if (currentX >= 20 && currentX <= worldWidth - 20 && 
-                currentY >= 20 && currentY <= worldHeight - 20) {
-                this.createNode('water', currentX, currentY, 2 + Math.floor(Math.random() * 2), 4 + Math.floor(Math.random() * 2));
-                this.updateTotalResources();
-            }
-        }
     }
 
     generateFoodPatches(worldWidth, worldHeight) {
@@ -163,7 +108,6 @@ export class ResourceManager {
         // Different regeneration rates for different resources
         switch (type) {
             case 'food': return 0.15 + Math.random() * 0.1; // Grows back relatively quickly
-            case 'water': return 0.2 + Math.random() * 0.1; // Replenishes fastest
             case 'wood': return 0.05 + Math.random() * 0.05; // Slower regeneration
             case 'stone': return 0.02 + Math.random() * 0.03; // Slowest regeneration
             default: return 0.1 + Math.random() * 0.2;
@@ -179,7 +123,7 @@ export class ResourceManager {
 
     addRandomNode(worldWidth = 800, worldHeight = 600) {
         // When adding random nodes (from explorer discoveries), use appropriate patterns
-        const types = ['food', 'wood', 'stone', 'water'];
+        const types = ['food', 'wood', 'stone'];
         const type = types[Math.floor(Math.random() * types.length)];
         
         // Find existing nodes of the same type to cluster near them
@@ -233,7 +177,7 @@ export class ResourceManager {
     }
 
     updateTotalResources() {
-        this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
+        this.resourceTotals = { food: 0, wood: 0, stone: 0 };
         this.nodes.forEach(node => {
             if (this.resourceTotals[node.type] !== undefined) {
                 this.resourceTotals[node.type] += node.amount;
@@ -251,7 +195,7 @@ export class ResourceManager {
 
     reset() {
         this.nodes = [];
-        this.resourceTotals = { food: 0, wood: 0, stone: 0, water: 0 };
+        this.resourceTotals = { food: 0, wood: 0, stone: 0 };
     }
 
     serialize() {

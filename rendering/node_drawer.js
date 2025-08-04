@@ -62,7 +62,6 @@ function drawWaterNode(ctx, node) {
     ctx.fill();
 }
 
-
 export function drawResourceNodes(ctx, nodes) {
     nodes.forEach(node => {
         ctx.globalAlpha = Math.max(0.3, node.amount / node.maxAmount);
@@ -76,9 +75,6 @@ export function drawResourceNodes(ctx, nodes) {
             case 'stone':
                 drawStoneNode(ctx, node);
                 break;
-            case 'water':
-                drawWaterNode(ctx, node);
-                break;
             default:
                 ctx.fillStyle = '#ccc';
                 ctx.beginPath();
@@ -88,4 +84,3 @@ export function drawResourceNodes(ctx, nodes) {
     });
     ctx.globalAlpha = 1;
 }
-

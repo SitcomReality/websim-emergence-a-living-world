@@ -44,7 +44,6 @@ export class Entity {
             food: Math.floor(Math.random() * 5) + 2,
             wood: Math.floor(Math.random() * 3) + 1,
             stone: Math.floor(Math.random() * 3) + 1,
-            water: Math.floor(Math.random() * 4) + 2
         };
         for (const resource in this.resources) {
             this.resources[resource] = Math.round(this.resources[resource] * 10) / 10;
@@ -182,7 +181,6 @@ export class Entity {
         const needs = [];
         // Basic resource needs
         if (this.resources.food < 3) needs.push('food');
-        if (this.resources.water < 3) needs.push('water');
         
         // Resource needs for potential crafting/building (less urgent)
         if (!this.home) {

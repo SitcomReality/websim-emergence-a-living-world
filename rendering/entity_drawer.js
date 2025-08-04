@@ -3,7 +3,6 @@ function drawCarriedResources(ctx, entity) {
         food: '#8BC34A',
         wood: '#795548',
         stone: '#607D8B',
-        water: '#03A9F4',
     };
 
     entity.inventory.items.forEach((item, index) => {

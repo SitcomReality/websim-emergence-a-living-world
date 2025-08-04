@@ -15,7 +15,6 @@ export function updateStats(world) {
     // Update resource counts
     const resourceTotals = world.resourceManager.getTotalResources();
     document.getElementById('foodCount').textContent = resourceTotals.food.toFixed(1);
-    document.getElementById('waterCount').textContent = resourceTotals.water.toFixed(1);
     document.getElementById('woodCount').textContent = resourceTotals.wood.toFixed(1);
     document.getElementById('stoneCount').textContent = resourceTotals.stone.toFixed(1);
 }
@@ -43,11 +42,9 @@ function displayHomeInfo(building, owner) {
                 <div>Stored Resources:</div>
                 <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
                     <span>Food: ${res.food.toFixed(1)}</span>
-                    <span>Water: ${res.water.toFixed(1)}</span>
                     <span>Wood: ${res.wood.toFixed(1)}</span>
                     <span>Stone: ${res.stone.toFixed(1)}</span>
                     <span>Cooked Food: ${(res.cooked_food || 0).toFixed(1)}</span>
-                    <span>F. Water: ${(res.filtered_water || 0).toFixed(1)}</span>
                     <span>Planks: ${(res.planks || 0).toFixed(1)}</span>
                     <span>Bricks: ${(res.bricks || 0).toFixed(1)}</span>
                 </div>
@@ -70,11 +67,9 @@ function displayStorageInfo(building, owner) {
                 <div>Stored Resources:</div>
                 <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
                     <span>Food: ${res.food.toFixed(1)}</span>
-                    <span>Water: ${res.water.toFixed(1)}</span>
                     <span>Wood: ${res.wood.toFixed(1)}</span>
                     <span>Stone: ${res.stone.toFixed(1)}</span>
                     <span>Cooked Food: ${(res.cooked_food || 0).toFixed(1)}</span>
-                    <span>F. Water: ${(res.filtered_water || 0).toFixed(1)}</span>
                     <span>Planks: ${(res.planks || 0).toFixed(1)}</span>
                     <span>Bricks: ${(res.bricks || 0).toFixed(1)}</span>
                 </div>
@@ -162,8 +157,8 @@ function updateSelectedEntityPanel(entity) {
             <div style="margin-top: 8px; font-size: 11px;">
                 <div>Resources (at home/storage):</div>
                 <div style="margin-left: 10px;">
-                    Food: ${info.resources.food.toFixed(1)}, Water: ${info.resources.water.toFixed(1)}<br>
-                    Wood: ${info.resources.wood.toFixed(1)}, Stone: ${info.resources.stone.toFixed(1)}
+                    Food: ${info.resources.food.toFixed(1)}, Wood: ${info.resources.wood.toFixed(1)}<br>
+                    Stone: ${info.resources.stone.toFixed(1)}
                 </div>
             </div>
              <div style="margin-top: 8px; font-size: 11px;">

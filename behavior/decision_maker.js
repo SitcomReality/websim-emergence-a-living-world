@@ -27,7 +27,7 @@ export class DecisionMaker {
         // 2. Address urgent needs
         const urgentNeed = this.getUrgentNeed();
         if (urgentNeed) {
-            if (urgentNeed === 'cooked_food') {
+            if (urgentNeed === 'food') {
                 this.findAndProcessResource('food');
             } else {
                 Actions.gatherResource(entity, urgentNeed);
@@ -126,7 +126,6 @@ export class DecisionMaker {
     getUrgentNeed() {
         const { resources, home } = this.entity;
         if (resources.food < 1 && (home?.inventory?.cooked_food || 0) < 1) return 'food'; // Raw food if desperate
-        if (resources.water < 3) return 'water'; // Water is slightly more urgent
         return null;
     }
 
@@ -170,7 +169,6 @@ export class DecisionMaker {
 
         // Basic needs gathering
         if (resources.food < 5) actions.push({ name: 'gather_food', execute: () => Actions.gatherResource(entity, 'food') });
-        if (resources.water < 5) actions.push({ name: 'gather_water', execute: () => Actions.gatherResource(entity, 'water') });
         if (resources.wood < 5) actions.push({ name: 'gather_wood', execute: () => Actions.gatherResource(entity, 'wood') });
         if (resources.stone < 5) actions.push({ name: 'gather_stone', execute: () => Actions.gatherResource(entity, 'stone') });
 
@@ -197,9 +195,6 @@ export class DecisionMaker {
             switch (action.name) {
                 case 'gather_food':
                     weight *= (5 - resources.food) * (personality.traits.productivity + 0.5);
-                    break;
-                case 'gather_water':
-                    weight *= (5 - resources.water) * (personality.traits.productivity + 0.5);
                     break;
                 case 'gather_wood':
                 case 'gather_stone':
