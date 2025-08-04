@@ -145,3 +145,175 @@ export function pursueTrade(entity) {
         entity.task.set('seeking trade');
     }
 }
+
+export function plantGarden(entity) {
+    if (!entity.home) {
+        wander(entity);
+        return;
+    }
+
+    // Choose garden type based on personality
+    const gardenType = entity.personality.traits.productivity > 0.6 ? 'food_garden' : 'flower_garden';
+    const seedCost = gardenType === 'food_garden' ? 2 : 1; // Food gardens need more seeds
+    
+    if ((entity.getResources().food || 0) < seedCost) {
+        gatherResource(entity, 'food'); // Need seeds
+        return;
+    }
+
+    // Find a spot near home for the garden
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 30 + Math.random() * 20;
+    const gardenX = entity.home.x + Math.cos(angle) * distance;
+    const gardenY = entity.home.y + Math.sin(angle) * distance;
+
+    entity.targetX = gardenX;
+    entity.targetY = gardenY;
+    entity.task.set(`planting ${gardenType.replace('_', ' ')}`, { x: gardenX, y: gardenY, type: gardenType });
+}
+
+export function teachSkill(entity) {
+    const nearbyEntity = entity.findNearbyEntity(80);
+    if (!nearbyEntity) {
+        seekSocialInteraction(entity);
+        return;
+    }
+
+    // Find a skill we're good at that they could improve
+    const ourSkills = entity.personality.getBestSkills(3);
+    const skillToTeach = ourSkills.find(([skillName, ourLevel]) => {
+        const theirLevel = nearbyEntity.personality.getSkill(skillName);
+        return ourLevel > theirLevel + 0.3; // We must be significantly better
+    });
+
+    if (skillToTeach) {
+        entity.targetX = nearbyEntity.x;
+        entity.targetY = nearbyEntity.y;
+        entity.task.set('teaching', { 
+            student: nearbyEntity, 
+            skill: skillToTeach[0],
+            teacherLevel: skillToTeach[1]
+        });
+        entity.world.eventSystem.addEvent(`${entity.getName()} is teaching ${skillToTeach[0].replace('_', ' ')} to ${nearbyEntity.getName()}.`);
+    } else {
+        seekSocialInteraction(entity);
+    }
+}
+
+export function dance(entity) {
+    if (!entity.home) {
+        wander(entity);
+        return;
+    }
+
+    // Dance near home or find others to dance with
+    const nearbyEntities = entity.world.getEntities().filter(other => 
+        other.id !== entity.id && entity.world.getDistance(entity, other) < 100
+    );
+
+    if (nearbyEntities.length > 0 && Math.random() < 0.6) {
+        // Group dance
+        const partner = nearbyEntities[Math.floor(Math.random() * nearbyEntities.length)];
+        entity.targetX = partner.x + (Math.random() - 0.5) * 30;
+        entity.targetY = partner.y + (Math.random() - 0.5) * 30;
+        entity.task.set('group dancing', { partners: [partner] });
+    } else {
+        // Solo dance
+        const danceX = entity.home.x + (Math.random() - 0.5) * 40;
+        const danceY = entity.home.y + (Math.random() - 0.5) * 40;
+        entity.targetX = danceX;
+        entity.targetY = danceY;
+        entity.task.set('solo dancing');
+    }
+}
+
+export function buildStatue(entity) {
+    if (!entity.home) {
+        wander(entity);
+        return;
+    }
+
+    const stoneNeeded = 3;
+    const resources = entity.getResources();
+    
+    if ((resources.stone || 0) < stoneNeeded) {
+        gatherResource(entity, 'stone');
+        return;
+    }
+
+    // Place statue near home
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 25 + Math.random() * 15;
+    const statueX = entity.home.x + Math.cos(angle) * distance;
+    const statueY = entity.home.y + Math.sin(angle) * distance;
+
+    entity.targetX = statueX;
+    entity.targetY = statueY;
+    entity.task.set('building statue', { x: statueX, y: statueY });
+}
+
+export function setupShop(entity) {
+    if (!entity.home) {
+        wander(entity);
+        return;
+    }
+
+    const woodNeeded = 4;
+    const resources = entity.getResources();
+    
+    if ((resources.planks || 0) < woodNeeded) {
+        // Need processed wood for shop
+        if ((resources.wood || 0) >= woodNeeded) {
+            processResource(entity, 'wood', entity.home);
+        } else {
+            gatherResource(entity, 'wood');
+        }
+        return;
+    }
+
+    // Place shop near home but accessible to others
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 35 + Math.random() * 10;
+    const shopX = entity.home.x + Math.cos(angle) * distance;
+    const shopY = entity.home.y + Math.sin(angle) * distance;
+
+    entity.targetX = shopX;
+    entity.targetY = shopY;
+    entity.task.set('building shop', { x: shopX, y: shopY });
+}
+
+export function meditate(entity) {
+    if (!entity.home) {
+        wander(entity);
+        return;
+    }
+
+    // Find a peaceful spot
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 20 + Math.random() * 20;
+    const meditateX = entity.home.x + Math.cos(angle) * distance;
+    const meditateY = entity.home.y + Math.sin(angle) * distance;
+
+    entity.targetX = meditateX;
+    entity.targetY = meditateY;
+    entity.task.set('meditating');
+}
+
+export function storytelling(entity) {
+    const nearbyEntities = entity.world.getEntities().filter(other => 
+        other.id !== entity.id && entity.world.getDistance(entity, other) < 120
+    );
+
+    if (nearbyEntities.length === 0) {
+        seekSocialInteraction(entity);
+        return;
+    }
+
+    // Find center point among nearby entities
+    const centerX = nearbyEntities.reduce((sum, e) => sum + e.x, entity.x) / (nearbyEntities.length + 1);
+    const centerY = nearbyEntities.reduce((sum, e) => sum + e.y, entity.y) / (nearbyEntities.length + 1);
+
+    entity.targetX = centerX;
+    entity.targetY = centerY;
+    entity.task.set('storytelling', { audience: nearbyEntities });
+}

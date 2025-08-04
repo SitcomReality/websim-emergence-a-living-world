@@ -170,3 +170,126 @@ export function gatherFromTargetNode(entity, deltaTime) {
     }
     // If progress is not complete, the entity remains here to continue harvesting on the next update.
 }
+
+export function performCreativeActivity(entity, deltaTime) {
+    const task = entity.task.current;
+    const taskData = entity.task.targetNode;
+
+    if (task === 'planting food garden' || task === 'planting flower garden') {
+        if (entity.movement.isAtTarget()) {
+            const gardenType = taskData.type;
+            const seedCost = gardenType === 'food_garden' ? 2 : 1;
+            
+            if (entity.useResourceFromHome('food', seedCost)) {
+                entity.world.createGarden(taskData.x, taskData.y, gardenType, entity.id);
+                entity.world.eventSystem.addEvent(`${entity.getName()} planted a beautiful ${gardenType.replace('_', ' ')}!`);
+                entity.vitals.increaseHappiness(20);
+            }
+            entity.task.idle();
+        }
+    } else if (task === 'building statue') {
+        if (entity.movement.isAtTarget()) {
+            if (entity.useResourceFromHome('stone', 3)) {
+                entity.world.createStatue(taskData.x, taskData.y, entity.id);
+                entity.world.eventSystem.addEvent(`${entity.getName()} built a magnificent statue of themselves!`);
+                entity.vitals.increaseHappiness(25);
+            }
+            entity.task.idle();
+        }
+    } else if (task === 'building shop') {
+        if (entity.movement.isAtTarget()) {
+            if (entity.useResourceFromHome('planks', 4)) {
+                entity.world.createShop(taskData.x, taskData.y, entity.id);
+                entity.world.eventSystem.addEvent(`${entity.getName()} opened a new shop!`);
+                entity.vitals.increaseHappiness(15);
+            }
+            entity.task.idle();
+        }
+    } else if (task === 'solo dancing' || task === 'group dancing') {
+        if (entity.movement.isAtTarget()) {
+            // Dance for a few seconds
+            entity.task.harvestingProgress += deltaTime;
+            if (entity.task.harvestingProgress >= 3000) { // 3 seconds of dancing
+                entity.vitals.increaseHappiness(10);
+                entity.vitals.increaseEnergy(5);
+                
+                if (task === 'group dancing' && taskData.partners) {
+                    // Boost relationships with dance partners
+                    taskData.partners.forEach(partner => {
+                        entity.updateRelationshipValue(partner.id, 0.1);
+                        partner.vitals.increaseHappiness(5);
+                    });
+                }
+                
+                entity.world.eventSystem.addEvent(`${entity.getName()} had a wonderful time dancing!`);
+                entity.task.idle();
+            }
+        }
+    } else if (task === 'meditating') {
+        if (entity.movement.isAtTarget()) {
+            entity.task.harvestingProgress += deltaTime;
+            if (entity.task.harvestingProgress >= 4000) { // 4 seconds of meditation
+                entity.vitals.increaseHappiness(15);
+                entity.vitals.increaseEnergy(8);
+                entity.world.eventSystem.addEvent(`${entity.getName()} found inner peace through meditation.`);
+                entity.task.idle();
+            }
+        }
+    } else if (task === 'storytelling') {
+        if (entity.movement.isAtTarget() && taskData.audience) {
+            entity.task.harvestingProgress += deltaTime;
+            if (entity.task.harvestingProgress >= 5000) { // 5 seconds of storytelling
+                entity.vitals.increaseHappiness(12);
+                
+                // Boost relationships with audience
+                taskData.audience.forEach(listener => {
+                    if (entity.world.getDistance(entity, listener) < 150) { // Still in range
+                        entity.updateRelationshipValue(listener.id, 0.08);
+                        listener.vitals.increaseHappiness(8);
+                    }
+                });
+                
+                entity.world.eventSystem.addEvent(`${entity.getName()} told captivating stories to a gathered audience.`);
+                entity.task.idle();
+            }
+        }
+    } else if (task === 'teaching') {
+        if (entity.movement.isAtTarget() && taskData.student) {
+            const student = taskData.student;
+            const skill = taskData.skill;
+            const teacherLevel = taskData.teacherLevel;
+            
+            if (entity.world.getDistance(entity, student) < 50) { // Still close enough
+                entity.task.harvestingProgress += deltaTime;
+                if (entity.task.harvestingProgress >= 6000) { // 6 seconds of teaching
+                    // Teaching outcome based on teacher skill
+                    const teachingSuccess = Math.random() < (teacherLevel / 2.0); // Better teachers = higher success rate
+                    
+                    if (teachingSuccess) {
+                        const improvement = Math.random() * 0.3 + 0.1; // 0.1 to 0.4 improvement
+                        const oldLevel = student.personality.getSkill(skill);
+                        student.personality.skills[skill] = Math.min(2.0, oldLevel + improvement);
+                        
+                        entity.world.eventSystem.addEvent(`${entity.getName()} successfully taught ${skill.replace('_', ' ')} to ${student.getName()}!`);
+                        entity.vitals.increaseHappiness(20);
+                        student.vitals.increaseHappiness(15);
+                        entity.updateRelationshipValue(student.id, 0.15);
+                    } else {
+                        // Bad teaching can actually make things worse
+                        if (teacherLevel < 1.2 && Math.random() < 0.3) {
+                            const penalty = Math.random() * 0.1 + 0.05;
+                            const oldLevel = student.personality.getSkill(skill);
+                            student.personality.skills[skill] = Math.max(0.5, oldLevel - penalty);
+                            entity.world.eventSystem.addEvent(`${entity.getName()}'s teaching confused ${student.getName()} about ${skill.replace('_', ' ')}.`);
+                        } else {
+                            entity.world.eventSystem.addEvent(`${entity.getName()} tried to teach ${student.getName()}, but the lesson didn't stick.`);
+                        }
+                    }
+                    entity.task.idle();
+                }
+            } else {
+                entity.task.idle(); // Student moved away
+            }
+        }
+    }
+}

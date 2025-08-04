@@ -126,6 +126,12 @@ export class Entity {
         if (this.currentTask === 'storing traded goods' && this.targetNode && this.movement.isAtTarget()) {
             this.depositTradeInventory();
         }
+        
+        // Handle creative and social activities
+        const creativeActivities = ['planting', 'building statue', 'building shop', 'dancing', 'meditating', 'storytelling', 'teaching'];
+        if (creativeActivities.some(activity => this.currentTask.includes(activity))) {
+            ActionHandler.performCreativeActivity(this, deltaTime);
+        }
     }
     
     // --- State Checks ---
@@ -238,6 +244,22 @@ export class Entity {
         if (this.resources[type] && this.resources[type] >= remainingNeeded) {
             this.resources[type] = Math.max(0, this.resources[type] - remainingNeeded);
         }
+    }
+    
+    useResourceFromHome(type, amount) {
+        const resources = this.getResources();
+        if (resources[type] >= amount) {
+            // Deduct from home/storage first, then personal
+            const depositPoint = this.getDepositPoint();
+            if (depositPoint && depositPoint.inventory[type] >= amount) {
+                depositPoint.inventory[type] -= amount;
+                return true;
+            } else if (this.resources[type] >= amount) {
+                this.resources[type] -= amount;
+                return true;
+            }
+        }
+        return false;
     }
 
     giveResource(type, amount) {

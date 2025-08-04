@@ -25,6 +25,7 @@ export class World {
         this.tradeCooldowns = new Map();
         this.interactionCooldowns = new Map();
         this.visualEffects = [];
+        this.decorativeStructures = []; // Gardens, statues, shops, etc.
     }
 
     get lastDeltaTime() {
@@ -48,6 +49,7 @@ export class World {
         this.tradeCooldowns.clear();
         this.interactionCooldowns.clear();
         this.visualEffects = [];
+        this.decorativeStructures = [];
     }
 
     generateInitialEntities() {
@@ -62,6 +64,47 @@ export class World {
             );
             this.entities.push(entity);
         }
+    }
+
+    createGarden(x, y, type, ownerId) {
+        const garden = {
+            id: Math.random().toString(36).substring(2, 9),
+            type: type, // 'food_garden' or 'flower_garden'
+            x: x,
+            y: y,
+            ownerId: ownerId,
+            maturity: 0, // 0 to 1, affects appearance and benefits
+            lastHarvest: 0
+        };
+        this.decorativeStructures.push(garden);
+        return garden;
+    }
+
+    createStatue(x, y, ownerId) {
+        const statue = {
+            id: Math.random().toString(36).substring(2, 9),
+            type: 'statue',
+            x: x,
+            y: y,
+            ownerId: ownerId,
+            style: Math.floor(Math.random() * 3) // Different statue styles
+        };
+        this.decorativeStructures.push(statue);
+        return statue;
+    }
+
+    createShop(x, y, ownerId) {
+        const shop = {
+            id: Math.random().toString(36).substring(2, 9),
+            type: 'shop',
+            x: x,
+            y: y,
+            ownerId: ownerId,
+            inventory: { food: 0, wood: 0, stone: 0, cooked_food: 0, planks: 0, bricks: 0 },
+            customerCount: 0
+        };
+        this.decorativeStructures.push(shop);
+        return shop;
     }
 
     update(deltaTime) {
@@ -92,6 +135,9 @@ export class World {
         this.visualEffects.forEach(effect => effect.life -= deltaTime);
         this.visualEffects = this.visualEffects.filter(effect => effect.life > 0);
 
+        // Update decorative structures
+        this.updateDecorativeStructures(deltaTime);
+
         // Update entities
         this.entities.forEach(entity => {
             entity.update(deltaTime);
@@ -108,6 +154,32 @@ export class World {
             this.completeCycle();
             this.cycleTimer = 0;
         }
+    }
+
+    updateDecorativeStructures(deltaTime) {
+        this.decorativeStructures.forEach(structure => {
+            if (structure.type === 'food_garden' || structure.type === 'flower_garden') {
+                // Gardens mature over time
+                if (structure.maturity < 1) {
+                    structure.maturity = Math.min(1, structure.maturity + deltaTime / 30000); // 30 seconds to mature
+                }
+                
+                // Mature gardens provide periodic benefits
+                if (structure.maturity >= 1) {
+                    const owner = this.entities.find(e => e.id === structure.ownerId);
+                    if (owner && this.getDistance(owner, structure) < 100) {
+                        // Passive happiness boost from nearby gardens
+                        owner.vitals.increaseHappiness(deltaTime / 10000); // Small continuous boost
+                    }
+                }
+            } else if (structure.type === 'statue') {
+                // Statues provide happiness to their owner when nearby
+                const owner = this.entities.find(e => e.id === structure.ownerId);
+                if (owner && this.getDistance(owner, structure) < 80) {
+                    owner.vitals.increaseHappiness(deltaTime / 15000); // Pride boost
+                }
+            }
+        });
     }
 
     processInteractions() {
@@ -297,6 +369,10 @@ export class World {
         return this.visualEffects;
     }
     
+    getDecorativeStructures() {
+        return this.decorativeStructures;
+    }
+    
     getProcessedResourceFor(rawType) {
         return RAW_TO_PROCESSED[rawType];
     }
@@ -310,6 +386,7 @@ export class World {
             entities: this.entities.map(e => e.serialize()),
             resourceManager: this.resourceManager.serialize(),
             buildingManager: this.buildingManager.serialize(),
+            decorativeStructures: this.decorativeStructures,
             cycleCount: this.cycleCount,
             cycleTimer: this.cycleTimer,
         };
@@ -320,6 +397,7 @@ export class World {
 
         this.cycleCount = data.cycleCount || 0;
         this.cycleTimer = data.cycleTimer || 0;
+        this.decorativeStructures = data.decorativeStructures || [];
 
         this.resourceManager.deserialize(data.resourceManager);
         this.resourceManager.world = this; // Relink world reference
