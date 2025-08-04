@@ -1,5 +1,27 @@
 // New file
 
+export function getNeeds(entity) {
+    const needs = [];
+    const resources = entity.getResources();
+
+    if (resources.food < 3) needs.push('food');
+
+    if (!entity.home) {
+        if (!entity.storageShed) {
+             if (entity.getCarriedResourceAmount('wood') + resources.wood < 1) needs.push('wood');
+        } else {
+            const neededForHome = entity.storageShed.getNeededResourcesFor('home');
+            if (neededForHome.length > 0) needs.push(...neededForHome);
+        }
+    } else if (resources.wood < 2) {
+        needs.push('wood');
+    }
+
+    if (resources.stone < 2) needs.push('stone');
+
+    return [...new Set(needs)];
+}
+
 // Determine the most pressing need
 export function getUrgentNeed(entity) {
     const { resources, home } = entity;

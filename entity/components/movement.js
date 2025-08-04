@@ -114,7 +114,7 @@ export class Movement {
                  this.entity.task.idle();
             }
             // Snap to target if it's a node
-            if (this.entity.targetNode) {
+            if (this.entity.task.target) {
                 this.x = this.targetX;
                 this.y = this.targetY;
             }

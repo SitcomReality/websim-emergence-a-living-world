@@ -200,11 +200,15 @@ export class World {
         const cooldownKey = [entity1.id, entity2.id].sort().join('-');
 
         // Check for trade opportunities
-        if (!this.tradeCooldowns.has(cooldownKey) && this.canTrade(entity1, entity2)) {
-            // Lower the probability of random trades to make them more special
+        const tradeLogic = () => {
+             // Lower the probability of random trades to make them more special
             if (Math.random() < 0.1) {
                  this.executeTrade(entity1, entity2);
             }
+        };
+
+        if (!this.tradeCooldowns.has(cooldownKey) && this.canTrade(entity1, entity2)) {
+           tradeLogic();
         }
 
         // Check for relationship interaction cooldown

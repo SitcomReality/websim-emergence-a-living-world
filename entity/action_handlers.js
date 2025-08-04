@@ -23,7 +23,7 @@ export function finishBuildingStorageShed(entity) {
 }
 
 export function workOnConstruction(entity) {
-    const site = entity.targetNode;
+    const site = entity.target;
     if (!site || !site.type.endsWith('_construction_site')) {
         entity.task.idle();
         return;
@@ -44,7 +44,7 @@ export function workOnConstruction(entity) {
 
 export function processResourcesInBuilding(entity, deltaTime) {
     const job = entity.task.processingJob;
-    const building = entity.task.targetNode;
+    const building = entity.task.target;
 
     if (!job || !building) {
         entity.task.idle();
@@ -86,7 +86,7 @@ export function processResourcesInBuilding(entity, deltaTime) {
 export function finishDepositing(entity) {
     if (entity.inventory.items.length === 0) return;
 
-    const depositPoint = entity.task.targetNode;
+    const depositPoint = entity.task.target;
     if (!depositPoint || !(depositPoint instanceof Building) || !('inventory' in depositPoint)) {
         // Fallback: If no valid building, deposit to personal (home) storage
         entity.inventory.items.forEach(item => {
@@ -107,7 +107,7 @@ export function finishDepositing(entity) {
 }
 
 export function gatherFromTargetNode(entity, deltaTime) {
-    if (!entity.task.targetNode || entity.isInventoryFull()) {
+    if (!entity.task.target || entity.isInventoryFull()) {
         entity.task.clearTarget();
         if (entity.isInventoryFull()) {
             Actions.depositResources(entity);
@@ -118,10 +118,10 @@ export function gatherFromTargetNode(entity, deltaTime) {
     }
 
     // Set a more specific task name for UI clarity
-    const resourceType = entity.task.targetNode.type;
+    const resourceType = entity.task.target.type;
     const taskName = `Harvesting ${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
     if (entity.task.current !== taskName) {
-        entity.task.set(taskName, entity.task.targetNode);
+        entity.task.set(taskName, entity.task.target);
     }
     
     // Get skill modifier for harvesting
@@ -138,7 +138,7 @@ export function gatherFromTargetNode(entity, deltaTime) {
     if (entity.task.harvestingProgress >= requiredProgress) {
         entity.task.harvestingProgress = 0; // Reset for next unit
 
-        const baseGathered = entity.world.resourceManager.gatherFrom(entity.task.targetNode);
+        const baseGathered = entity.world.resourceManager.gatherFrom(entity.task.target);
         if (baseGathered) {
             // Apply yield multiplier
             const bonusAmount = baseGathered.amount * (yieldMultiplier - 1.0);
@@ -158,7 +158,7 @@ export function gatherFromTargetNode(entity, deltaTime) {
         }
 
         // Decide if we should continue gathering or go home after getting one unit
-        if (entity.isInventoryFull() || entity.task.targetNode.amount <= 0) {
+        if (entity.isInventoryFull() || entity.task.target.amount <= 0) {
             entity.task.clearTarget();
             if (entity.isInventoryFull()) {
                 Actions.depositResources(entity);
@@ -173,7 +173,7 @@ export function gatherFromTargetNode(entity, deltaTime) {
 
 export function performCreativeActivity(entity, deltaTime) {
     const task = entity.task.current;
-    const taskData = entity.task.targetNode;
+    const taskData = entity.task.target;
 
     if (task === 'planting food garden' || task === 'planting flower garden') {
         if (entity.movement.isAtTarget()) {

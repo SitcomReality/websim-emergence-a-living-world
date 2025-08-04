@@ -3,8 +3,8 @@ export class Task {
         this.entity = entity;
         this.current = 'idle';
         this.goal = 'Surviving';
-        this.targetNode = null;
-        this.targetNodeId = null; // for saving
+        this.target = null; // Can be a node, building, or entity
+        this.targetId = null; // for saving
         this.processingJob = null; // For processing tasks { rawType, processedType, amount }
         this.harvestingProgress = 0; // For time-based gathering
         this.actionTimer = Math.random() * 2000;
@@ -25,9 +25,9 @@ export class Task {
         return false;
     }
 
-    set(taskName, targetNode = null) {
+    set(taskName, target = null) {
         this.current = taskName;
-        this.targetNode = targetNode;
+        this.target = target;
         this.processingJob = null;
         this.harvestingProgress = 0; // Reset progress on new task
     }
@@ -51,7 +51,7 @@ export class Task {
     }
     
     clearTarget() {
-        this.targetNode = null;
+        this.target = null;
         this.processingJob = null;
         this.harvestingProgress = 0;
     }
@@ -60,7 +60,7 @@ export class Task {
         return {
             current: this.current,
             goal: this.goal,
-            targetNodeId: this.targetNode ? this.targetNode.id : null,
+            targetId: this.target ? this.target.id : null,
             actionTimer: this.actionTimer,
             actionInterval: this.actionInterval,
             processingJob: this.processingJob,
@@ -74,16 +74,17 @@ export class Task {
         this.goal = data.goal || 'Surviving';
         this.actionTimer = data.actionTimer;
         this.actionInterval = data.actionInterval;
-        this.targetNodeId = data.targetNodeId; // Store for linking
+        this.targetId = data.targetId; // Store for linking
         this.processingJob = data.processingJob;
         this.harvestingProgress = data.harvestingProgress || 0;
     }
     
     linkSavedData(world) {
-        if (this.targetNodeId) {
-            // Target could be a resource node or a building
-            this.targetNode = world.resourceManager.getNodes().find(n => n.id === this.targetNodeId) ||
-                              world.buildingManager.getBuildingById(this.targetNodeId);
+        if (this.targetId) {
+            // Target could be a resource node, a building, or another entity
+            this.target = world.resourceManager.getNodes().find(n => n.id === this.targetId) ||
+                              world.buildingManager.getBuildingById(this.targetId) ||
+                              world.entities.find(e => e.id === this.targetId);
         }
     }
 }

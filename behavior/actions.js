@@ -69,12 +69,12 @@ export function constructBuilding(entity, building) {
 }
 
 export function gatherResource(entity, resourceType) {
-    const targetNode = entity.findClosestResourceNode(resourceType);
-    if (targetNode) {
-        entity.targetX = targetNode.x;
-        entity.targetY = targetNode.y;
-        // Set a generic gathering task initially. It will be specified once harvesting starts.
-        entity.task.set(`gathering ${resourceType}`, targetNode);
+    const target = entity.findClosestResourceNode(resourceType);
+    if (target) {
+        entity.targetX = target.x;
+        entity.targetY = target.y;
+        // Set a generic gathering task initially. It will be specified once harvesting begins.
+        entity.task.set(`gathering ${resourceType}`, target);
     } else {
         // If no node of that type is found, maybe explore?
         explore(entity);
@@ -127,7 +127,7 @@ export function seekSocialInteraction(entity) {
     if (nearbyEntity) {
         entity.targetX = nearbyEntity.x;
         entity.targetY = nearbyEntity.y;
-        entity.task.set('socializing');
+        entity.task.set('socializing', nearbyEntity);
         entity.world.eventSystem.addEvent(`${entity.getName()} is seeking social interaction.`);
     } else {
         wander(entity);

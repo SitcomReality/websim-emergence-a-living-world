@@ -1,5 +1,5 @@
 import * as Actions from './actions.js';
-import * as NeedsAssessor from './decision_making/needs_assessor.js';
+import * as Needs from './decision_making/needs_assessor.js';
 import * as ActionGenerator from './decision_making/action_generator.js';
 import * as TradeEvaluator from './decision_making/trade_evaluator.js';
 import { handleHomelessBehavior } from './decision_making/homeless_behavior.js';
@@ -9,20 +9,14 @@ export class DecisionMaker {
         this.entity = entity;
     }
 
-    // The main decision-making function
     decideNextAction() {
         const entity = this.entity;
 
-        // 0. HIGHEST PRIORITY: Establish a home if homeless
         if (!entity.home) {
-            // Only make new homeless decisions if truly idle
-            if (entity.currentTask === 'idle') {
-                handleHomelessBehavior(entity);
-            }
+            if (entity.currentTask === 'idle') handleHomelessBehavior(entity);
             return;
         }
 
-        // 1. Handle critical state: Full inventory or has traded goods
         if (entity.isInventoryFull()) {
             entity.task.setGoal('Storing Resources');
             Actions.depositResources(entity);
@@ -34,77 +28,88 @@ export class DecisionMaker {
             return;
         }
 
-        // 2. Address urgent needs
-        const urgentNeed = NeedsAssessor.getUrgentNeed(entity);
+        const urgentNeed = Needs.getUrgentNeed(entity);
         if (urgentNeed) {
-            entity.task.setGoal('Fulfilling Basic Need');
-            if (urgentNeed === 'food') {
-                this.findAndProcessResource('food');
-            } else {
-                // Consider skill efficiency when deciding whether to gather or trade
-                const harvestSkill = entity.personality.getSkill(`${urgentNeed}_harvesting`);
-                if (harvestSkill < 0.8 && TradeEvaluator.canTradeForResource(entity, urgentNeed)) {
-                    Actions.pursueTrade(entity);
-                } else {
-                    Actions.gatherResource(entity, urgentNeed);
-                }
-            }
+            this.addressUrgentNeed(urgentNeed);
             return;
         }
 
-        // 2.5 Process resources if needed for goals
-        const resourceToProcess = NeedsAssessor.getNeededProcessedResource(entity);
+        const resourceToProcess = Needs.getNeededProcessedResource(entity);
         if (resourceToProcess) {
-            entity.task.setGoal('Improving Resources');
-            const processSkill = entity.personality.getSkill(`${resourceToProcess}_processing`);
-            const processedType = entity.world.getProcessedResourceFor(resourceToProcess);
+            this.addressProcessingNeed(resourceToProcess);
+            return;
+        }
 
-            if (processSkill < 0.8 && TradeEvaluator.canTradeForProcessedResource(entity, processedType)) {
+        this.chooseOpportunisticAction();
+    }
+    
+    addressUrgentNeed(need) {
+        const entity = this.entity;
+        entity.task.setGoal('Fulfilling Basic Need');
+        if (need === 'food') {
+            this.findAndProcessResource('food');
+        } else {
+            if (entity.personality.getSkill(`${need}_harvesting`) < 0.8 && TradeEvaluator.canTradeForResource(entity, need)) {
                 Actions.pursueTrade(entity);
             } else {
-                this.findAndProcessResource(resourceToProcess);
+                Actions.gatherResource(entity, need);
             }
-            return;
         }
+    }
 
-        // 3. Consider personality-driven and opportunistic actions
+    addressProcessingNeed(rawType) {
+        const entity = this.entity;
+        entity.task.setGoal('Improving Resources');
+        const processedType = entity.world.getProcessedResourceFor(rawType);
+
+        if (entity.personality.getSkill(`${rawType}_processing`) < 0.8 && TradeEvaluator.canTradeForProcessedResource(entity, processedType)) {
+            Actions.pursueTrade(entity);
+        } else {
+            this.findAndProcessResource(rawType);
+        }
+    }
+
+    chooseOpportunisticAction() {
+        const entity = this.entity;
         const possibleActions = ActionGenerator.getPossibleActions(entity, () => TradeEvaluator.canTradeProfitably(entity));
         const weightedActions = ActionGenerator.weighActions(entity, possibleActions);
         
-        // Choose a random action based on weights
         const totalWeight = weightedActions.reduce((sum, action) => sum + action.weight, 0);
         let random = Math.random() * totalWeight;
 
         for (const action of weightedActions) {
             random -= action.weight;
             if (random <= 0) {
-                // Set goal based on chosen action
-                if (action.name.startsWith('gather') || action.name.startsWith('specialize')) {
-                    entity.task.setGoal('Stockpiling Resources');
-                } else if (action.name === 'explore') {
-                    entity.task.setGoal('Exploring the World');
-                } else if (action.name === 'socialize') {
-                    entity.task.setGoal('Building Relationships');
-                } else if (action.name === 'trade') {
-                    entity.task.setGoal('Seeking Profitable Trade');
-                } else {
-                    entity.task.setGoal('Wandering');
-                }
+                this.setGoalForAction(action.name);
                 action.execute();
                 return;
             }
         }
-
-        // 4. Default action if nothing else is chosen
+        
         entity.task.setGoal('Wandering');
         Actions.wander(entity);
     }
     
+    setGoalForAction(actionName) {
+        const entity = this.entity;
+        if (actionName.startsWith('gather') || actionName.startsWith('specialize')) {
+            entity.task.setGoal('Stockpiling Resources');
+        } else if (actionName === 'explore') {
+            entity.task.setGoal('Exploring the World');
+        } else if (actionName === 'socialize') {
+            entity.task.setGoal('Building Relationships');
+        } else if (actionName === 'trade') {
+            entity.task.setGoal('Seeking Profitable Trade');
+        } else {
+            entity.task.setGoal('Wandering');
+        }
+    }
+
     findAndProcessResource(rawType) {
         const entity = this.entity;
         const processLocation = entity.home || entity.storageShed;
         if (!processLocation) {
-            Actions.wander(entity); // Cannot process without a location
+            Actions.wander(entity);
             return;
         }
 
@@ -115,3 +120,4 @@ export class DecisionMaker {
         }
     }
 }
+

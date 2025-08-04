@@ -6,7 +6,10 @@ import { Relationships } from './entity/components/relationships.js';
 import { Vitals } from './entity/components/vitals.js';
 import { Task } from './entity/components/task.js';
 import { Movement } from './entity/components/movement.js';
+import { Appearance } from './entity/components/appearance.js';
 import * as ActionHandler from './entity/action_handlers.js';
+import * as Needs from './behavior/decision_making/needs_assessor.js';
+import * as Perception from './entity/perception.js';
 
 export class Entity {
     constructor(x, y, world, hasHome = false) {
@@ -22,16 +25,6 @@ export class Entity {
         this.homeId = null; // for saving
         this.storageShedId = null; // for saving
         
-        // Appearance properties
-        this.skinColor = this.generateSkinColor();
-        this.eyeOpenness = 1.0; // 0 = closed, 1 = fully open
-        this.pupilOffsetX = 0; // For eye direction/expression
-        this.pupilOffsetY = 0;
-        this.mouthCurve = 0; // -1 = frown, 0 = neutral, 1 = smile
-        this.gazeTarget = { x: x, y: y };
-        this.gazeTimer = 0;
-        this.gazeDuration = 3000 + Math.random() * 2000; // Change gaze every 3-5 seconds when idle
-        
         // Components
         this.personality = new Personality();
         this.decisionMaker = new DecisionMaker(this);
@@ -41,6 +34,7 @@ export class Entity {
         this.vitals = new Vitals();
         this.task = new Task(this);
         this.movement = new Movement(this, x, y);
+        this.appearance = new Appearance(this);
 
         if (hasHome) {
             this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
@@ -63,41 +57,8 @@ export class Entity {
         }
     }
 
-    generateSkinColor() {
-        // Generate varied skin hues with consistent saturation and lightness
-        const hue = Math.random() * 360; // Full hue range
-        const saturation = 45; // Consistent saturation
-        const lightness = 70; // Consistent lightness
-        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    }
-
     getAppearance() {
-        // Base appearance that can be modified by mood, actions, etc.
-        let eyeOpenness = this.eyeOpenness;
-        let mouthCurve = this.mouthCurve;
-        
-        // Modify appearance based on current state
-        if (this.vitals.happiness > 80) {
-            mouthCurve = Math.max(mouthCurve, 0.8); // Happy smile
-        } else if (this.vitals.happiness < 30) {
-            mouthCurve = Math.min(mouthCurve, -0.6); // Sad frown
-        }
-        
-        if (this.vitals.energy < 20) {
-            eyeOpenness *= 0.6; // Tired, droopy eyes
-        }
-        
-        // Add some subtle random variation to make them feel alive
-        const timeVariation = Math.sin(Date.now() / 3000 + this.id.charCodeAt(0)) * 0.1;
-        eyeOpenness = Math.max(0.2, Math.min(1.0, eyeOpenness + timeVariation));
-        
-        return {
-            skinColor: this.skinColor,
-            eyeOpenness: eyeOpenness,
-            pupilOffsetX: this.pupilOffsetX,
-            pupilOffsetY: this.pupilOffsetY,
-            mouthCurve: mouthCurve
-        };
+        return this.appearance.get();
     }
 
     static createFromSave(data, world) {
@@ -113,8 +74,8 @@ export class Entity {
     get homeX() { return this.home ? this.home.x : (this.homeLocation ? this.homeLocation.x : null); }
     get homeY() { return this.home ? this.home.y : (this.homeLocation ? this.homeLocation.y : null); }
     get currentTask() { return this.task.current; }
-    get targetNode() { return this.task.targetNode; }
-    set targetNode(node) { this.task.targetNode = node; }
+    get target() { return this.task.target; }
+    set target(node) { this.task.target = node; }
     get targetX() { return this.movement.targetX; }
     set targetX(x) { this.movement.targetX = x; }
     get targetY() { return this.movement.targetY; }
@@ -129,7 +90,7 @@ export class Entity {
         this.vitals.update(deltaTime);
         this.task.update(deltaTime);
         this.movement.update(deltaTime);
-        this.updateGaze(deltaTime);
+        this.appearance.update(deltaTime);
         
         // Perform actions based on personality and needs (commit until current task finishes)
         if (this.task.shouldPerformAction()) {
@@ -145,13 +106,13 @@ export class Entity {
         // --- Action Handlers ---
         // If at target node, try to gather
         if (this.currentTask.startsWith('gathering') || this.currentTask.startsWith('Harvesting')) {
-            if (this.targetNode && this.movement.isAtTarget()) {
+            if (this.target && this.movement.isAtTarget()) {
                 ActionHandler.gatherFromTargetNode(this, this.world.lastDeltaTime);
             }
         }
 
         // If returning to deposit, check if arrived
-        if (this.currentTask === 'depositing' && this.targetNode && this.movement.isAtTarget()) {
+        if (this.currentTask === 'depositing' && this.target && this.movement.isAtTarget()) {
             ActionHandler.finishDepositing(this);
         }
 
@@ -161,17 +122,17 @@ export class Entity {
         }
 
         // If at a construction site, do work
-        if (this.currentTask.startsWith('constructing') && this.targetNode && this.movement.isAtTarget()) {
+        if (this.currentTask.startsWith('constructing') && this.target && this.movement.isAtTarget()) {
             ActionHandler.workOnConstruction(this);
         }
         
         // If at home/storage to process resources
-        if (this.currentTask.startsWith('processing') && this.targetNode && this.movement.isAtTarget()) {
+        if (this.currentTask.startsWith('processing') && this.target && this.movement.isAtTarget()) {
             ActionHandler.processResourcesInBuilding(this, deltaTime);
         }
 
         // If at deposit point to store traded goods
-        if (this.currentTask === 'storing traded goods' && this.targetNode && this.movement.isAtTarget()) {
+        if (this.currentTask === 'storing traded goods' && this.target && this.movement.isAtTarget()) {
             this.depositTradeInventory();
         }
         
@@ -179,77 +140,6 @@ export class Entity {
         const creativeActivities = ['planting', 'building statue', 'building shop', 'dancing', 'meditating', 'storytelling', 'teaching'];
         if (creativeActivities.some(activity => this.currentTask.includes(activity))) {
             ActionHandler.performCreativeActivity(this, deltaTime);
-        }
-    }
-    
-    updateGaze(deltaTime) {
-        this.gazeTimer += deltaTime;
-
-        let target = null;
-
-        // Priority 1: Task-specific targets
-        if (this.task.targetNode) {
-            // Handle tasks where targetNode is a building or resource node
-            if (this.task.targetNode.x !== undefined) {
-                 target = this.task.targetNode;
-            }
-            // Handle tasks where targetNode is an object with another entity (e.g., teaching)
-            else if (this.task.targetNode.student) target = this.task.targetNode.student;
-            else if (this.task.targetNode.partners) target = this.task.targetNode.partners[0];
-            else if (this.task.targetNode.audience) target = this.task.targetNode.audience[0];
-        } else if (this.currentTask === 'socializing') {
-            const nearbyEntity = this.findNearbyEntity(150);
-            if (nearbyEntity) target = nearbyEntity;
-        }
-
-        // Priority 2: Movement target
-        if (!target && (this.targetX !== this.x || this.targetY !== this.y)) {
-            target = { x: this.targetX, y: this.targetY };
-        }
-
-        // Priority 3: Idle gazing
-        if (!target) {
-            if (this.gazeTimer >= this.gazeDuration) {
-                this.gazeTimer = 0;
-                this.gazeDuration = 2000 + Math.random() * 4000; // 2-6 seconds
-                const lookRange = 80;
-                this.gazeTarget = {
-                    x: this.x + (Math.random() - 0.5) * lookRange,
-                    y: this.y + (Math.random() - 0.5) * lookRange
-                };
-            }
-            target = this.gazeTarget;
-        } else {
-            // We have a primary target, so reset idle gaze timer.
-            this.gazeTimer = 0;
-            this.gazeTarget = target;
-        }
-
-        // Fallback to prevent errors
-        if (!target) {
-            target = { x: this.x, y: this.y + 1 }; // Look forward
-        }
-
-        // Calculate pupil offset based on direction to target
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        const maxPupilOffset = 2.0; // Max distance pupil can move from eye center
-
-        if (distance > 1) {
-            const targetPupilX = (dx / distance) * maxPupilOffset;
-            const targetPupilY = (dy / distance) * maxPupilOffset;
-
-            // Smoothly move pupils towards the target direction
-            const lerpFactor = 0.08;
-            this.pupilOffsetX = this.pupilOffsetX * (1 - lerpFactor) + targetPupilX * lerpFactor;
-            this.pupilOffsetY = this.pupilOffsetY * (1 - lerpFactor) + targetPupilY * lerpFactor;
-        } else {
-            // If at target, slowly return pupils to center
-            const lerpFactor = 0.05;
-            this.pupilOffsetX *= (1 - lerpFactor);
-            this.pupilOffsetY *= (1 - lerpFactor);
         }
     }
     
@@ -469,16 +359,8 @@ export class Entity {
             homeLocation: this.homeLocation,
             settlementRotation: this.settlementRotation,
             resources: this.resources,
-            // Appearance
-            skinColor: this.skinColor,
-            eyeOpenness: this.eyeOpenness,
-            pupilOffsetX: this.pupilOffsetX,
-            pupilOffsetY: this.pupilOffsetY,
-            mouthCurve: this.mouthCurve,
-            gazeTarget: this.gazeTarget,
-            gazeTimer: this.gazeTimer,
-            gazeDuration: this.gazeDuration,
             // Components
+            appearance: this.appearance.serialize(),
             personality: this.personality.traits,
             inventory: this.inventory.serialize(),
             tradeInventory: this.tradeInventory.serialize(),
@@ -496,16 +378,7 @@ export class Entity {
         this.settlementRotation = data.settlementRotation || 0;
         this.resources = data.resources;
 
-        // Appearance
-        this.skinColor = data.skinColor || this.generateSkinColor();
-        this.eyeOpenness = data.eyeOpenness || 1.0;
-        this.pupilOffsetX = data.pupilOffsetX || 0;
-        this.pupilOffsetY = data.pupilOffsetY || 0;
-        this.mouthCurve = data.mouthCurve || 0;
-        this.gazeTarget = data.gazeTarget || { x: this.x, y: this.y };
-        this.gazeTimer = data.gazeTimer || 0;
-        this.gazeDuration = data.gazeDuration || 4000;
-
+        this.appearance.deserialize(data.appearance);
         this.personality.traits = data.personality;
         this.inventory.deserialize(data.inventory);
         this.tradeInventory.deserialize(data.tradeInventory || { items: [], capacity: 10 });
