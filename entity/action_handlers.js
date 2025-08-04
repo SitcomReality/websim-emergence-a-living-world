@@ -6,7 +6,8 @@ export function finishBuildingStorageShed(entity) {
 
     const woodNeeded = 5; // Updated to match building_specs
     // Check carried and home-stored resources
-    let woodAvailable = entity.getCarriedResourceAmount('wood') + entity.resources.wood;
+    const availableResources = entity.getResources();
+    let woodAvailable = entity.getCarriedResourceAmount('wood') + availableResources.wood;
 
     if (woodAvailable >= woodNeeded) {
         entity.useResource('wood', woodNeeded);

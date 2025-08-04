@@ -11,8 +11,8 @@ export class BuildingManager {
         home.rotation = entity.settlementRotation || 0;
         this.buildings.push(home);
         // Transfer resources from owner's personal supply to new home
-        home.inventory = { ...entity.resources };
-        entity.resources = { food: 0, wood: 0, stone: 0 };
+        home.inventory = { ...entity.resourceManager.resources };
+        entity.resourceManager.resources = { food: 0, wood: 0, stone: 0, cooked_food: 0, planks: 0, bricks: 0 };
         return home;
     }
 

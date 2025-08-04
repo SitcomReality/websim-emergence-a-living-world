@@ -48,7 +48,8 @@ export function buildStorageShed(entity) {
     }
 
     const woodNeeded = 5; // Updated to match building_specs requirement
-    const woodAvailable = entity.resources.wood + entity.inventory.getAmount('wood');
+    const availableResources = entity.getResources();
+    const woodAvailable = availableResources.wood + entity.inventory.getAmount('wood');
 
     if (woodAvailable >= woodNeeded) {
         // We have the wood, now go to the location and build
