@@ -56,10 +56,17 @@ export function setupEventListeners(ui) {
     const CLICK_CYCLE_TIMEOUT = 2000; // 2 seconds to continue cycling
     const CLICK_POSITION_TOLERANCE = 10; // pixels
 
-    canvas.addEventListener('click', (e) => {
+    function getScaledCoordinates(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+        return { x, y };
+    }
+
+    canvas.addEventListener('click', (e) => {
+        const { x, y } = getScaledCoordinates(e);
         const currentTime = Date.now();
         
         // Check if this click is close to the last click position and within time limit
@@ -107,9 +114,7 @@ export function setupEventListeners(ui) {
     });
 
     canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const { x, y } = getScaledCoordinates(e);
 
         const foundEntity = findClickedEntity(x, y, world);
         if (ui.hoveredEntity !== foundEntity) {
