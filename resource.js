@@ -1,5 +1,6 @@
 export class ResourceManager {
-    constructor() {
+    constructor(world) {
+        this.world = world;
         this.nodes = [];
         this.saplings = []; // For seeds/saplings that will grow into new nodes
         this.resourceTotals = { food: 0, wood: 0, stone: 0 };

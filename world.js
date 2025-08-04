@@ -14,7 +14,7 @@ const PROCESSED_TO_RAW = Object.fromEntries(Object.entries(RAW_TO_PROCESSED).map
 export class World {
     constructor() {
         this.entities = [];
-        this.resourceManager = new ResourceManager();
+        this.resourceManager = new ResourceManager(this);
         this.eventSystem = new EventSystem();
         this.buildingManager = new BuildingManager(this);
         this.width = 800;
