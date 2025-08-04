@@ -136,8 +136,8 @@ export function seekSocialInteraction(entity) {
 
 export function pursueTrade(entity) {
     const nearbyEntity = entity.findNearbyEntity(150); // Larger radius for trading
-    if (nearbyEntity && entity.world.canTrade(entity, nearbyEntity)) {
-        entity.world.executeTrade(entity, nearbyEntity);
+    if (nearbyEntity && entity.world.interactionManager.canTrade(entity, nearbyEntity)) {
+        entity.world.interactionManager.executeTrade(entity, nearbyEntity);
         entity.task.idle();
     } else {
         // Wander to find others

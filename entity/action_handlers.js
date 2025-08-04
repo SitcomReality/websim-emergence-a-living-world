@@ -181,7 +181,7 @@ export function performCreativeActivity(entity, deltaTime) {
             const seedCost = gardenType === 'food_garden' ? 2 : 1;
             
             if (entity.useResourceFromHome('food', seedCost)) {
-                entity.world.createGarden(taskData.x, taskData.y, gardenType, entity.id);
+                entity.world.decorativeStructureManager.createGarden(taskData.x, taskData.y, gardenType, entity.id);
                 entity.world.eventSystem.addEvent(`${entity.getName()} planted a beautiful ${gardenType.replace('_', ' ')}!`);
                 entity.vitals.increaseHappiness(20);
             }
@@ -190,7 +190,7 @@ export function performCreativeActivity(entity, deltaTime) {
     } else if (task === 'building statue') {
         if (entity.movement.isAtTarget()) {
             if (entity.useResourceFromHome('stone', 3)) {
-                entity.world.createStatue(taskData.x, taskData.y, entity.id);
+                entity.world.decorativeStructureManager.createStatue(taskData.x, taskData.y, entity.id);
                 entity.world.eventSystem.addEvent(`${entity.getName()} built a magnificent statue of themselves!`);
                 entity.vitals.increaseHappiness(25);
             }
@@ -199,7 +199,7 @@ export function performCreativeActivity(entity, deltaTime) {
     } else if (task === 'building shop') {
         if (entity.movement.isAtTarget()) {
             if (entity.useResourceFromHome('planks', 4)) {
-                entity.world.createShop(taskData.x, taskData.y, entity.id);
+                entity.world.decorativeStructureManager.createShop(taskData.x, taskData.y, entity.id);
                 entity.world.eventSystem.addEvent(`${entity.getName()} opened a new shop!`);
                 entity.vitals.increaseHappiness(15);
             }
