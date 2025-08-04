@@ -13,18 +13,18 @@ export function finishBuildingStorageShed(entity) {
         const shed = entity.world.buildingManager.createStorageShed(entity.id, entity.homeLocation.x, entity.homeLocation.y);
         entity.storageShed = shed;
         entity.world.eventSystem.addEvent(`${entity.name} built a storage shed.`);
-        entity.currentTask = 'idle';
+        entity.task.idle();
     } else {
         // This should not happen if logic is correct, but as a fallback:
         Actions.gatherResource(entity, 'wood');
-        entity.currentTask = 'gathering for shed';
+        entity.task.set('gathering for shed');
     }
 }
 
 export function workOnConstruction(entity) {
     const site = entity.targetNode;
     if (!site || !site.type.endsWith('_construction_site')) {
-        entity.currentTask = 'idle';
+        entity.task.idle();
         return;
     }
 
@@ -34,7 +34,7 @@ export function workOnConstruction(entity) {
     if (completed) {
         entity.world.eventSystem.addEvent(`${entity.name} finished building their home!`);
         entity.home = completed;
-        entity.currentTask = 'idle';
+        entity.task.idle();
         // The entity will stay at the new home location, can start a new action next cycle
     }
     // If not completed, the entity will stay here to work more on the next action cycle.

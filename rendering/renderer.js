@@ -291,7 +291,7 @@ export class Renderer {
         }
 
         // Draw line to target destination
-        if (selectedEntity.currentTask !== 'idle' && selectedEntity.currentTask !== 'wandering') {
+        if (selectedEntity.currentTask !== 'idle' && selectedEntity.currentTask !== 'wandering' && selectedEntity.targetX !== selectedEntity.x && selectedEntity.targetY !== selectedEntity.y) {
             this.ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)'; // Red
             this.ctx.setLineDash([5, 5]);
             this.ctx.beginPath();
