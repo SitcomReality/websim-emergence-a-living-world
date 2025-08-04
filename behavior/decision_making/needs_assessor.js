@@ -24,7 +24,8 @@ export function getNeeds(entity) {
 
 // Determine the most pressing need
 export function getUrgentNeed(entity) {
-    const { resources, home } = entity;
+    const resources = entity.getResources(); // Use the getter method
+    const { home } = entity;
     if (resources.food < 1 && (home?.inventory?.cooked_food || 0) < 1) return 'food'; // Raw food if desperate
     return null;
 }
