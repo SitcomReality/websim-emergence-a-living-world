@@ -50,8 +50,11 @@ export class Personality {
         const descriptions = [];
         
         if (this.traits.curiosity > 0.7) descriptions.push("curious");
+        else if (this.traits.curiosity < 0.3) descriptions.push("cautious");
         if (this.traits.sociability > 0.7) descriptions.push("social");
+        else if (this.traits.sociability < 0.3) descriptions.push("solitary");
         if (this.traits.productivity > 0.7) descriptions.push("hardworking");
+        else if (this.traits.productivity < 0.3) descriptions.push("lazy");
         if (this.traits.aggression > 0.7) descriptions.push("aggressive");
         if (this.traits.cooperation > 0.7) descriptions.push("cooperative");
         if (this.traits.risktaking > 0.7) descriptions.push("adventurous");

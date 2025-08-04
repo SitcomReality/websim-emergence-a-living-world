@@ -1,15 +1,19 @@
-import { Personality } from './personality.js';
-import { generateName } from './utils.js';
-import { DecisionMaker } from './behavior/decision_maker.js';
-import { Inventory } from './entity/components/inventory.js';
-import { Relationships } from './entity/components/relationships.js';
-import { Vitals } from './entity/components/vitals.js';
-import { Task } from './entity/components/task.js';
-import { Movement } from './entity/components/movement.js';
-import { Appearance } from './entity/components/appearance.js';
-import * as ActionHandler from './entity/action_handlers.js';
-import * as Needs from './behavior/decision_making/needs_assessor.js';
-import * as Perception from './entity/perception.js';
+import { Personality } from '../personality.js';
+import { generateName } from '../utils.js';
+import { DecisionMaker } from '../behavior/decision_maker.js';
+import { Inventory } from './components/inventory.js';
+import { Relationships } from './components/relationships.js';
+import { Vitals } from './components/vitals.js';
+import { Task } from './components/task.js';
+import { Movement } from './components/movement.js';
+import { Appearance } from './components/appearance.js';
+import * as ActionHandler from './action_handlers.js';
+import * as Needs from '../behavior/decision_making/needs_assessor.js';
+import * as Perception from './perception.js';
+
+import { State } from './components/state.js';
+import { ResourceManager } from './components/resource_manager.js';
+import { RelationshipManager } from './components/relationship_manager.js';
 
 export class Entity {
     constructor(x, y, world, hasHome = false) {
@@ -17,15 +21,11 @@ export class Entity {
         this.world = world;
         this.name = generateName();
         
-        // State Properties
-        this.home = null;
-        this.storageShed = null;
-        this.homeLocation = null; // Planned {x, y} for home
-        this.settlementRotation = 0; // The rotation of the settlement this entity belongs to
-        this.homeId = null; // for saving
-        this.storageShedId = null; // for saving
-        
         // Components
+        this.state = new State(this);
+        this.resourceManager = new ResourceManager(this);
+        this.relationshipManager = new RelationshipManager(this);
+
         this.personality = new Personality();
         this.decisionMaker = new DecisionMaker(this);
         this.inventory = new Inventory();
@@ -37,24 +37,12 @@ export class Entity {
         this.appearance = new Appearance(this);
 
         if (hasHome) {
-            this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
-            this.homeLocation = { x: this.home.x, y: this.home.y };
+            this.state.setHome(this.world.buildingManager.createHomeForEntity(this, x, y));
             // Give starting processed food
             this.home.inventory.cooked_food = 5;
         }
 
-        // Home/personal resource storage (remains here for now as it's tightly coupled with building logic)
-        this.resources = {
-            food: Math.floor(Math.random() * 5) + 2,
-            wood: Math.floor(Math.random() * 3) + 1,
-            stone: Math.floor(Math.random() * 3) + 1,
-            cooked_food: 0,
-            planks: 0,
-            bricks: 0,
-        };
-        for (const resource in this.resources) {
-            this.resources[resource] = Math.round(this.resources[resource] * 10) / 10;
-        }
+        this.resourceManager.initializeResources();
     }
 
     getAppearance() {
@@ -71,8 +59,8 @@ export class Entity {
     // --- Getters ---
     get x() { return this.movement.x; }
     get y() { return this.movement.y; }
-    get homeX() { return this.home ? this.home.x : (this.homeLocation ? this.homeLocation.x : null); }
-    get homeY() { return this.home ? this.home.y : (this.homeLocation ? this.homeLocation.y : null); }
+    get homeX() { return this.state.homeX; }
+    get homeY() { return this.state.homeY; }
     get currentTask() { return this.task.current; }
     get target() { return this.task.target; }
     set target(node) { this.task.target = node; }
@@ -80,6 +68,15 @@ export class Entity {
     set targetX(x) { this.movement.targetX = x; }
     get targetY() { return this.movement.targetY; }
     set targetY(y) { this.movement.targetY = y; }
+    
+    get home() { return this.state.home; }
+    set home(building) { this.state.home = building; }
+    get storageShed() { return this.state.storageShed; }
+    set storageShed(building) { this.state.storageShed = building; }
+    get homeLocation() { return this.state.homeLocation; }
+    set homeLocation(location) { this.state.homeLocation = location; }
+    get settlementRotation() { return this.state.settlementRotation; }
+    set settlementRotation(rotation) { this.state.settlementRotation = rotation; }
 
     getDepositPoint() {
         // Priority: Home > Storage Shed
@@ -133,7 +130,7 @@ export class Entity {
 
         // If at deposit point to store traded goods
         if (this.currentTask === 'storing traded goods' && this.target && this.movement.isAtTarget()) {
-            this.depositTradeInventory();
+            this.resourceManager.depositTradeInventory();
         }
         
         // Handle creative and social activities
@@ -144,14 +141,7 @@ export class Entity {
     }
     
     // --- State Checks ---
-    isAtHome() {
-        const hx = this.homeX;
-        const hy = this.homeY;
-        if (hx === null || hy === null) return false;
-        const dx = hx - this.x;
-        const dy = hy - this.y;
-        return Math.sqrt(dx * dx + dy * dy) < 15; // A bit larger radius for home area
-    }
+    isAtHome() { return this.state.isAtHome(); }
     
     isInventoryFull() { return this.inventory.isFull(); }
     hasTradedGoods() { return this.tradeInventory.items.length > 0; }
@@ -162,169 +152,25 @@ export class Entity {
     }
     
     findClosestResourceNode(resourceType) {
-        // Get all other entities that are currently gathering from a node.
-        const otherEntities = this.world.getEntities().filter(e => e.id !== this.id);
-        const busyNodeIds = new Set();
-        otherEntities.forEach(e => {
-            if (e.task && (e.task.current.startsWith('gathering') || e.task.current.startsWith('Harvesting')) && e.task.targetNode) {
-                busyNodeIds.add(e.task.targetNode.id);
-            }
-        });
-
-        const nodes = this.world.getResourceNodes().filter(n =>
-            n.type === resourceType &&
-            n.amount > 0 &&
-            !busyNodeIds.has(n.id) // Exclude nodes that are currently being worked on
-        );
-        if (nodes.length === 0) return null;
-
-        let closestNode = null;
-        let minDistance = Infinity;
-
-        for (const node of nodes) {
-            const distance = this.world.getDistance(this, node);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestNode = node;
-            }
-        }
-        return closestNode;
+        return Perception.findClosestResourceNode(this, resourceType);
     }
     
     findNearbyEntity(range = 100) {
-        const entities = this.world.getEntities().filter(e => e.id !== this.id);
-        if (entities.length === 0) return null;
-        
-        let closest = null;
-        let closestDistance = Infinity;
-        
-        for (const entity of entities) {
-            const distance = this.world.getDistance(this, entity);
-            if (distance < closestDistance) {
-                closest = entity;
-                closestDistance = distance;
-            }
-        }
-        
-        return closestDistance < range ? closest : null;
+        return Perception.findNearbyEntity(this, range);
     }
     
-    // --- Resource Management ---
-    getNeeds() {
-        const needs = [];
-        // Basic resource needs
-        if (this.resources.food < 3) needs.push('food');
-        
-        // Resource needs for potential crafting/building (less urgent)
-        if (!this.home) {
-            if (!this.storageShed) {
-                 if (this.getCarriedResourceAmount('wood') + this.resources.wood < 1) needs.push('wood');
-            } else {
-                const needed = this.storageShed.getNeededResourcesFor('home');
-                if (needed.length > 0) needs.push(...needed);
-            }
-        } else if (this.resources.wood < 2) needs.push('wood');
-        if (this.resources.stone < 2) needs.push('stone');
-
-        return [...new Set(needs)];
-    }
-
-    getResources() {
-        const total = { ...this.resources };
-        const depositPoint = this.getDepositPoint();
-        if (depositPoint && depositPoint.inventory) {
-            for(const type in depositPoint.inventory) {
-                total[type] = (total[type] || 0) + depositPoint.inventory[type];
-            }
-        }
-        // Ensure all types are present for the UI
-        const allTypes = ['food', 'wood', 'stone', 'cooked_food', 'planks', 'bricks'];
-        allTypes.forEach(type => {
-            if (!total.hasOwnProperty(type)) {
-                total[type] = 0;
-            }
-        });
-        return total;
-    }
-
+    // --- Resource Management (delegated) ---
+    getNeeds() { return this.resourceManager.getNeeds(); }
+    getResources() { return this.resourceManager.getResources(); }
     getCarriedResourceAmount(type) { return this.inventory.getAmount(type); }
-
-    useResource(type, amount) {
-        // Use carried resources first, then stored ones.
-        const carried = this.getCarriedResourceAmount(type);
-        if (carried >= amount) {
-            this.inventory.use(type, amount);
-            return;
-        }
-
-        let remainingNeeded = amount;
-        if (carried > 0) {
-            remainingNeeded -= carried;
-            this.inventory.use(type, carried);
-        }
-
-        if (this.resources[type] && this.resources[type] >= remainingNeeded) {
-            this.resources[type] = Math.max(0, this.resources[type] - remainingNeeded);
-        }
-    }
+    useResource(type, amount) { return this.resourceManager.useResource(type, amount); }
+    useResourceFromHome(type, amount) { return this.resourceManager.useResourceFromHome(type, amount); }
+    giveResource(type, amount) { return this.resourceManager.giveResource(type, amount); }
+    receiveResource(type, amount) { return this.resourceManager.receiveResource(type, amount); }
     
-    useResourceFromHome(type, amount) {
-        const resources = this.getResources();
-        if (resources[type] >= amount) {
-            // Deduct from home/storage first, then personal
-            const depositPoint = this.getDepositPoint();
-            if (depositPoint && depositPoint.inventory[type] >= amount) {
-                depositPoint.inventory[type] -= amount;
-                return true;
-            } else if (this.resources[type] >= amount) {
-                this.resources[type] -= amount;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    giveResource(type, amount) {
-        // This is for trading, uses home resources
-        const depositPoint = this.getDepositPoint();
-        let resourceUsed = false;
-        if (depositPoint && depositPoint.inventory[type] >= amount) {
-            depositPoint.inventory[type] -= amount;
-            resourceUsed = true;
-        }
-        
-        if (!resourceUsed && this.resources[type] >= amount) {
-             this.resources[type] -= amount;
-             resourceUsed = true;
-        }
-        
-        // This function assumes check for resource availability was done before calling.
-    }
-
-    receiveResource(type, amount) {
-        // Received resources from a trade go into a temporary holding inventory
-        this.tradeInventory.add({ type, amount });
-    }
-
-    depositTradeInventory() {
-        const depositPoint = this.getDepositPoint();
-        if (!depositPoint || this.tradeInventory.items.length === 0) {
-            this.task.idle();
-            return;
-        }
-
-        this.tradeInventory.items.forEach(item => {
-            depositPoint.inventory[item.type] = (depositPoint.inventory[item.type] || 0) + item.amount;
-        });
-
-        this.world.eventSystem.addEvent(`${this.name} stored away goods from a trade.`);
-        this.tradeInventory.clear();
-        this.task.idle();
-    }
-    
-    // --- Relationships ---
-    updateRelationshipValue(entityId, change) { this.relationships.update(entityId, change); }
-    getRelationships() { return this.relationships.get(); }
+    // --- Relationships (delegated) ---
+    updateRelationshipValue(entityId, change) { this.relationshipManager.updateRelationshipValue(entityId, change); }
+    getRelationships() { return this.relationshipManager.getRelationships(); }
     
     // --- Info & Serialization ---
     getName() { return this.name; }
@@ -354,14 +200,12 @@ export class Entity {
         return {
             id: this.id,
             name: this.name,
-            homeId: this.home ? this.home.id : null,
-            storageShedId: this.storageShed ? this.storageShed.id : null,
-            homeLocation: this.homeLocation,
-            settlementRotation: this.settlementRotation,
-            resources: this.resources,
             // Components
+            state: this.state.serialize(),
+            resourceManager: this.resourceManager.serialize(),
             appearance: this.appearance.serialize(),
             personality: this.personality.traits,
+            skills: this.personality.skills,
             inventory: this.inventory.serialize(),
             tradeInventory: this.tradeInventory.serialize(),
             relationships: this.relationships.serialize(),
@@ -374,27 +218,23 @@ export class Entity {
     deserialize(data) {
         this.id = data.id;
         this.name = data.name;
-        this.homeLocation = data.homeLocation;
-        this.settlementRotation = data.settlementRotation || 0;
-        this.resources = data.resources;
 
+        // Components
+        this.state.deserialize(data.state);
+        this.resourceManager.deserialize(data.resourceManager);
         this.appearance.deserialize(data.appearance);
         this.personality.traits = data.personality;
+        this.personality.skills = data.skills || this.personality.skills; // For loading older saves
         this.inventory.deserialize(data.inventory);
         this.tradeInventory.deserialize(data.tradeInventory || { items: [], capacity: 10 });
         this.relationships.deserialize(data.relationships);
         this.vitals.deserialize(data.vitals);
         this.task.deserialize(data.task);
         this.movement.deserialize(data.movement);
-
-        this.homeId = data.homeId;
-        this.storageShedId = data.storageShedId;
     }
 
     linkSavedData() {
-        if (this.homeId) this.home = this.world.buildingManager.getBuildingById(this.homeId);
-        if (this.storageShedId) this.storageShed = this.world.buildingManager.getBuildingById(this.storageShedId);
-        
+        this.state.linkSavedData(this.world);
         this.task.linkSavedData(this.world);
     }
 }
