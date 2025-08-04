@@ -15,12 +15,62 @@ export class Movement {
     moveTowardsTarget(deltaTime) {
         const dx = this.targetX - this.x;
         const dy = this.targetY - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distanceToTarget = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance > 2) {
+        if (distanceToTarget > 2) {
+            let moveX = 0;
+            let moveY = 0;
+
+            // --- Vector towards target ---
+            if (distanceToTarget > 0) {
+                moveX = dx / distanceToTarget;
+                moveY = dy / distanceToTarget;
+            }
+
+            // --- Avoidance behavior ---
+            const avoidanceRadius = 15; // The distance within which entities start avoiding each other
+            const repulsionStrength = 0.8; // How strongly they repel
+            let avoidanceX = 0;
+            let avoidanceY = 0;
+            let neighbors = 0;
+
+            const otherEntities = this.entity.world.getEntities();
+            for (const other of otherEntities) {
+                if (other.id === this.entity.id) continue;
+
+                const otherDx = this.x - other.x;
+                const otherDy = this.y - other.y;
+                const distSq = otherDx * otherDx + otherDy * otherDy;
+
+                if (distSq < avoidanceRadius * avoidanceRadius && distSq > 0) {
+                    const distance = Math.sqrt(distSq);
+                    const force = (avoidanceRadius - distance) / avoidanceRadius;
+                    avoidanceX += (otherDx / distance) * force;
+                    avoidanceY += (otherDy / distance) * force;
+                    neighbors++;
+                }
+            }
+
+            if (neighbors > 0) {
+                avoidanceX /= neighbors;
+                avoidanceY /= neighbors;
+                
+                // Combine movement and avoidance vectors
+                moveX = moveX * (1 - repulsionStrength) + avoidanceX * repulsionStrength;
+                moveY = moveY * (1 - repulsionStrength) + avoidanceY * repulsionStrength;
+            }
+
+            // Normalize final movement vector
+            const finalMoveMagnitude = Math.sqrt(moveX * moveX + moveY * moveY);
+            if (finalMoveMagnitude > 0) {
+                moveX /= finalMoveMagnitude;
+                moveY /= finalMoveMagnitude;
+            }
+            
             const moveDistance = this.speed * (deltaTime / 1000);
-            this.x += (dx / distance) * moveDistance;
-            this.y += (dy / distance) * moveDistance;
+            this.x += moveX * moveDistance;
+            this.y += moveY * moveDistance;
+
         } else {
             // Reached target
             if (this.entity.currentTask === 'wandering' || this.entity.currentTask === 'exploring') {
@@ -59,4 +109,3 @@ export class Movement {
         this.speed = data.speed;
     }
 }
-
