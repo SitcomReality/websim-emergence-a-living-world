@@ -1,7 +1,7 @@
 // Defines the specific actions an entity can take.
 
 export function wander(entity) {
-    entity.currentTask = 'wandering';
+    entity.task.set('wandering');
     const range = entity.personality.traits.curiosity > 0.7 ? 200 : 100;
     entity.targetX = entity.x + (Math.random() - 0.5) * range;
     entity.targetY = entity.y + (Math.random() - 0.5) * range;
@@ -12,7 +12,7 @@ export function wander(entity) {
 }
 
 export function findHomeLocation(entity) {
-    entity.currentTask = 'finding a home location';
+    entity.task.set('finding a home location');
     // Simplified logic: find a good spot near resources, not too close to others.
     // This could be a complex scoring system in the future.
     const bestSpot = entity.world.buildingManager.findBestBuildLocation(entity);
@@ -41,11 +41,10 @@ export function buildStorageShed(entity) {
         // We have the wood, now go to the location and build
         entity.targetX = entity.homeLocation.x;
         entity.targetY = entity.homeLocation.y;
-        entity.currentTask = 'building storage';
+        entity.task.set('building storage');
 
     } else {
         // Need to gather wood first
-        entity.currentTask = 'gathering for shed';
         gatherResource(entity, 'wood');
     }
 }
@@ -53,17 +52,15 @@ export function buildStorageShed(entity) {
 export function constructBuilding(entity, building) {
      entity.targetX = building.x;
      entity.targetY = building.y;
-     entity.targetNode = building; // Target the construction site
-     entity.currentTask = `constructing ${building.type.replace('_construction_site', '')}`;
+     entity.task.set(`constructing ${building.type.replace('_construction_site', '')}`, building);
 }
 
 export function gatherResource(entity, resourceType) {
     const targetNode = entity.findClosestResourceNode(resourceType);
     if (targetNode) {
-        entity.targetNode = targetNode;
         entity.targetX = targetNode.x;
         entity.targetY = targetNode.y;
-        entity.currentTask = `gathering ${resourceType}`;
+        entity.task.set(`gathering ${resourceType}`, targetNode);
     } else {
         // If no node of that type is found, maybe explore?
         explore(entity);
@@ -72,7 +69,7 @@ export function gatherResource(entity, resourceType) {
 
 export function depositResources(entity) {
     if (entity.inventory.items.length === 0) {
-        entity.currentTask = 'idle';
+        entity.task.idle();
         return;
     };
 
@@ -80,16 +77,31 @@ export function depositResources(entity) {
     if (depositPoint) {
         entity.targetX = depositPoint.x;
         entity.targetY = depositPoint.y;
-        entity.targetNode = depositPoint; // Can be a building
-        entity.currentTask = 'depositing';
+        entity.task.set('depositing', depositPoint);
     } else {
         // This case should ideally not be hit if logic is correct
-        entity.currentTask = 'idle';
+        entity.task.idle();
+    }
+}
+
+export function storeTradedGoods(entity) {
+    if (entity.tradeInventory.items.length === 0) {
+        entity.task.idle();
+        return;
+    }
+
+    const depositPoint = entity.getDepositPoint();
+    if (depositPoint) {
+        entity.targetX = depositPoint.x;
+        entity.targetY = depositPoint.y;
+        entity.task.set('storing traded goods', depositPoint);
+    } else {
+        entity.task.idle(); // Can't store if no home
     }
 }
 
 export function explore(entity) {
-    entity.currentTask = 'exploring';
+    entity.task.set('exploring');
     // Aim for a region of the map they haven't been to recently
     entity.targetX = Math.random() * entity.world.width;
     entity.targetY = Math.random() * entity.world.height;
@@ -101,7 +113,7 @@ export function seekSocialInteraction(entity) {
     if (nearbyEntity) {
         entity.targetX = nearbyEntity.x;
         entity.targetY = nearbyEntity.y;
-        entity.currentTask = 'socializing';
+        entity.task.set('socializing');
         entity.world.eventSystem.addEvent(`${entity.getName()} is seeking social interaction.`);
     } else {
         wander(entity);
@@ -112,10 +124,10 @@ export function pursueTrade(entity) {
     const nearbyEntity = entity.findNearbyEntity(150); // Larger radius for trading
     if (nearbyEntity && entity.world.canTrade(entity, nearbyEntity)) {
         entity.world.executeTrade(entity, nearbyEntity);
-        entity.currentTask = 'idle';
+        entity.task.idle();
     } else {
         // Wander to find others
         wander(entity);
-        entity.currentTask = 'seeking trade';
+        entity.task.set('seeking trade');
     }
 }

@@ -43,7 +43,7 @@ export function workOnConstruction(entity) {
 export function finishDepositing(entity) {
     if (entity.inventory.items.length === 0) return;
 
-    const depositPoint = entity.targetNode;
+    const depositPoint = entity.task.targetNode;
     if (!depositPoint || !(depositPoint instanceof Object) || !('inventory' in depositPoint)) {
         // Fallback: If no valid building, deposit to personal (home) storage
         entity.inventory.items.forEach(item => {
@@ -60,35 +60,35 @@ export function finishDepositing(entity) {
     }
 
     entity.inventory.clear();
-    entity.currentTask = 'idle';
+    entity.task.idle();
 }
 
 export function gatherFromTargetNode(entity) {
-    if (!entity.targetNode || entity.isInventoryFull()) {
-        entity.targetNode = null;
+    if (!entity.task.targetNode || entity.isInventoryFull()) {
+        entity.task.clearTarget();
         if (entity.isInventoryFull()) {
             Actions.depositResources(entity);
         } else {
-            entity.currentTask = 'idle';
+            entity.task.idle();
         }
         return;
     }
 
-    const gathered = entity.world.resourceManager.gatherFrom(entity.targetNode);
+    const gathered = entity.world.resourceManager.gatherFrom(entity.task.targetNode);
     if (gathered) {
         entity.inventory.add(gathered);
-        entity.energy = Math.min(100, entity.energy + 5);
+        entity.vitals.increaseEnergy(5);
         // Don't log every single gather event to reduce spam.
     }
 
     // Decide if we should continue gathering or go home
-    if (entity.isInventoryFull() || entity.targetNode.amount <= 0) {
-        entity.targetNode = null;
+    if (entity.isInventoryFull() || entity.task.targetNode.amount <= 0) {
+        entity.task.clearTarget();
         if (entity.isInventoryFull()) {
             Actions.depositResources(entity);
         } else {
             // Node is empty, find something else to do
-            entity.currentTask = 'idle';
+            entity.task.idle();
         }
     }
 }
