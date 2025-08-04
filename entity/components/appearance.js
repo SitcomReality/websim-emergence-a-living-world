@@ -23,6 +23,16 @@ export class Appearance {
         let eyeOpenness = this.eyeOpenness;
         let mouthCurve = this.mouthCurve;
 
+        // Blinking logic
+        const now = Date.now();
+        const blinkCycle = now % 4000; // 4-second cycle
+        const blinkDuration = 150; // 150ms blink
+        const blinkChance = 0.002; // 0.2% chance per frame
+        
+        if (blinkCycle < blinkDuration || Math.random() < blinkChance) {
+            eyeOpenness = 0.1; // Closed eyes
+        }
+
         if (this.entity.vitals.happiness > 80) mouthCurve = Math.max(mouthCurve, 0.8);
         else if (this.entity.vitals.happiness < 30) mouthCurve = Math.min(mouthCurve, -0.6);
 
@@ -117,4 +127,3 @@ export class Appearance {
         this.gazeDuration = data.gazeDuration || 4000;
     }
 }
-
