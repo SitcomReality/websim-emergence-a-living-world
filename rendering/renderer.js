@@ -43,7 +43,8 @@ export class Renderer {
         
         this.drawResourceNodes(this.world.getResourceNodes());
         this.drawBuildings(this.world.getBuildings(), selectedBuilding, hoveredBuilding);
-        this.drawRelationships(this.world.getEntities());
+        this.drawSelectionContextLines(selectedEntity);
+        this.drawRelationships(this.world.getEntities(), selectedEntity);
         this.drawEntities(this.world.getEntities(), selectedEntity, hoveredEntity);
         this.drawVisualEffects(this.world.getVisualEffects());
     }
@@ -262,18 +263,49 @@ export class Renderer {
         this.ctx.restore();
     }
 
-    drawRelationships(entities) {
+    drawSelectionContextLines(selectedEntity) {
+        if (!selectedEntity) return;
+
+        this.ctx.save();
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.8;
+
+        // Draw line to home
+        const homeX = selectedEntity.homeX;
+        const homeY = selectedEntity.homeY;
+        if (homeX !== null && homeY !== null) {
+            this.ctx.strokeStyle = 'rgba(0, 150, 255, 0.8)'; // Blue
+            this.ctx.beginPath();
+            this.ctx.moveTo(selectedEntity.x, selectedEntity.y);
+            this.ctx.lineTo(homeX, homeY);
+            this.ctx.stroke();
+        }
+
+        // Draw line to target destination
+        if (selectedEntity.currentTask !== 'idle' && selectedEntity.currentTask !== 'wandering') {
+            this.ctx.strokeStyle = 'rgba(255, 50, 50, 0.8)'; // Red
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.beginPath();
+            this.ctx.moveTo(selectedEntity.x, selectedEntity.y);
+            this.ctx.lineTo(selectedEntity.targetX, selectedEntity.targetY);
+            this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+    }
+
+    drawRelationships(entities, selectedEntity) {
+        if (!selectedEntity) return;
+
         this.ctx.lineWidth = 1;
         this.ctx.globalAlpha = 0.6;
         
         const relationships = [];
-        entities.forEach(entity => {
-            entity.getRelationships().forEach(rel => {
-                const target = entities.find(e => e.id === rel.targetId);
-                if (target && rel.type !== 'neutral' && entity.id < target.id) {
-                    relationships.push({ from: entity, to: target, type: rel.type });
-                }
-            });
+        selectedEntity.getRelationships().forEach(rel => {
+            const target = entities.find(e => e.id === rel.targetId);
+            if (target && rel.type !== 'neutral') {
+                relationships.push({ from: selectedEntity, to: target, type: rel.type });
+            }
         });
         
         const colorMap = {
