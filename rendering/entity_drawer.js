@@ -55,39 +55,129 @@ function drawHarvestIndicator(ctx, entity) {
     ctx.fillText(icon, entity.x, entity.y - 25);
 }
 
+function drawProceduralEntity(ctx, entity, isSelected, isHovered) {
+    const size = 20;
+
+    ctx.save();
+    ctx.translate(entity.x, entity.y);
+
+    // Selection/hover highlights
+    if (isSelected) {
+        ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2 + 5, 0, 2 * Math.PI);
+        ctx.fill();
+    } else if (isHovered) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(0, 0, size / 2 + 3, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    
+    // Get entity appearance data
+    const appearance = entity.getAppearance();
+    
+    // Draw body (smaller circle below head)
+    ctx.fillStyle = appearance.skinColor;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 6, 6, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw head (main circle)
+    ctx.fillStyle = appearance.skinColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, size / 2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw eyes
+    const eyeOpenness = appearance.eyeOpenness; // 0 = closed, 1 = fully open
+    const eyeWidth = 4;
+    const eyeHeight = 4 * eyeOpenness;
+    const eyeY = -2;
+    
+    // Left eye
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.ellipse(-3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+    
+    // Right eye  
+    ctx.beginPath();
+    ctx.ellipse(3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Draw pupils (only if eyes are open enough)
+    if (eyeOpenness > 0.2) {
+        ctx.fillStyle = 'black';
+        const pupilSize = Math.min(2, eyeHeight * 0.6);
+        
+        // Create clipping region for pupils to stay within eye area
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(-3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+        ctx.ellipse(3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+        ctx.clip();
+        
+        // Left pupil
+        ctx.beginPath();
+        ctx.arc(-3 + appearance.pupilOffsetX, eyeY + appearance.pupilOffsetY, pupilSize / 2, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Right pupil
+        ctx.beginPath();
+        ctx.arc(3 + appearance.pupilOffsetX, eyeY + appearance.pupilOffsetY, pupilSize / 2, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    // Draw mouth
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const mouthY = 3;
+    const mouthCurve = appearance.mouthCurve; // -1 = frown, 0 = neutral, 1 = smile
+    
+    if (Math.abs(mouthCurve) < 0.1) {
+        // Neutral mouth - straight line
+        ctx.moveTo(-2, mouthY);
+        ctx.lineTo(2, mouthY);
+    } else if (mouthCurve > 0) {
+        // Smile - upward curve
+        ctx.moveTo(-2, mouthY);
+        ctx.quadraticCurveTo(0, mouthY - mouthCurve * 2, 2, mouthY);
+    } else {
+        // Frown - downward curve
+        ctx.moveTo(-2, mouthY);
+        ctx.quadraticCurveTo(0, mouthY - mouthCurve * 2, 2, mouthY);
+    }
+    ctx.stroke();
+    
+    drawCarriedResources(ctx, entity);
+
+    ctx.restore();
+}
+
 export function drawEntities(ctx, entities, selectedEntity, hoveredEntity, images) {
     entities.forEach(entity => {
-        const sprite = images['creature_sprite.png'];
-        if (!sprite) return;
+        const isSelected = selectedEntity && entity.id === selectedEntity.id;
+        const isHovered = hoveredEntity && entity.id === hoveredEntity.id;
         
-        const size = 20;
-
-        ctx.save();
-        ctx.translate(entity.x, entity.y);
-
-        if (selectedEntity && entity.id === selectedEntity.id) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
-            ctx.beginPath();
-            ctx.arc(0, 0, size / 2 + 5, 0, 2 * Math.PI);
-            ctx.fill();
-        } else if (hoveredEntity && entity.id === hoveredEntity.id) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.beginPath();
-            ctx.arc(0, 0, size / 2 + 3, 0, 2 * Math.PI);
-            ctx.fill();
-        }
-        
-        ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
-        
-        drawCarriedResources(ctx, entity);
-
-        ctx.restore();
+        drawProceduralEntity(ctx, entity, isSelected, isHovered);
 
         if (entity.currentTask.startsWith('Harvesting')) {
             drawHarvestIndicator(ctx, entity);
         }
 
-        if (hoveredEntity && entity.id === hoveredEntity.id) {
+        if (isHovered) {
             drawNameplate(ctx, entity);
         }
     });

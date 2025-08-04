@@ -22,6 +22,13 @@ export class Entity {
         this.homeId = null; // for saving
         this.storageShedId = null; // for saving
         
+        // Appearance properties
+        this.skinColor = this.generateSkinColor();
+        this.eyeOpenness = 1.0; // 0 = closed, 1 = fully open
+        this.pupilOffsetX = 0; // For eye direction/expression
+        this.pupilOffsetY = 0;
+        this.mouthCurve = 0; // -1 = frown, 0 = neutral, 1 = smile
+        
         // Components
         this.personality = new Personality();
         this.decisionMaker = new DecisionMaker(this);
@@ -51,6 +58,43 @@ export class Entity {
         for (const resource in this.resources) {
             this.resources[resource] = Math.round(this.resources[resource] * 10) / 10;
         }
+    }
+
+    generateSkinColor() {
+        // Generate varied skin hues with consistent saturation and lightness
+        const hue = Math.random() * 360; // Full hue range
+        const saturation = 45; // Consistent saturation
+        const lightness = 70; // Consistent lightness
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    getAppearance() {
+        // Base appearance that can be modified by mood, actions, etc.
+        let eyeOpenness = this.eyeOpenness;
+        let mouthCurve = this.mouthCurve;
+        
+        // Modify appearance based on current state
+        if (this.vitals.happiness > 80) {
+            mouthCurve = Math.max(mouthCurve, 0.8); // Happy smile
+        } else if (this.vitals.happiness < 30) {
+            mouthCurve = Math.min(mouthCurve, -0.6); // Sad frown
+        }
+        
+        if (this.vitals.energy < 20) {
+            eyeOpenness *= 0.6; // Tired, droopy eyes
+        }
+        
+        // Add some subtle random variation to make them feel alive
+        const timeVariation = Math.sin(Date.now() / 3000 + this.id.charCodeAt(0)) * 0.1;
+        eyeOpenness = Math.max(0.2, Math.min(1.0, eyeOpenness + timeVariation));
+        
+        return {
+            skinColor: this.skinColor,
+            eyeOpenness: eyeOpenness,
+            pupilOffsetX: this.pupilOffsetX,
+            pupilOffsetY: this.pupilOffsetY,
+            mouthCurve: mouthCurve
+        };
     }
 
     static createFromSave(data, world) {
@@ -350,6 +394,12 @@ export class Entity {
             homeLocation: this.homeLocation,
             settlementRotation: this.settlementRotation,
             resources: this.resources,
+            // Appearance
+            skinColor: this.skinColor,
+            eyeOpenness: this.eyeOpenness,
+            pupilOffsetX: this.pupilOffsetX,
+            pupilOffsetY: this.pupilOffsetY,
+            mouthCurve: this.mouthCurve,
             // Components
             personality: this.personality.traits,
             inventory: this.inventory.serialize(),
@@ -367,6 +417,13 @@ export class Entity {
         this.homeLocation = data.homeLocation;
         this.settlementRotation = data.settlementRotation || 0;
         this.resources = data.resources;
+
+        // Appearance
+        this.skinColor = data.skinColor || this.generateSkinColor();
+        this.eyeOpenness = data.eyeOpenness || 1.0;
+        this.pupilOffsetX = data.pupilOffsetX || 0;
+        this.pupilOffsetY = data.pupilOffsetY || 0;
+        this.mouthCurve = data.mouthCurve || 0;
 
         this.personality.traits = data.personality;
         this.inventory.deserialize(data.inventory);

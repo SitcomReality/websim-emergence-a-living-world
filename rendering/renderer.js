@@ -18,12 +18,9 @@ export class Renderer {
     }
 
     async loadAssets() {
+        // We no longer need to load entity sprites, but keep the system for potential future assets
         const imageList = [
-            'creature_sprite.png',
-            'farmer_sprite.png',
-            'trader_sprite.png',
-            'crafter_sprite.png',
-            'explorer_sprite.png'
+            // Entity sprites no longer needed - using procedural generation
         ];
         
         this.images = await loadAssets(imageList);
@@ -31,7 +28,7 @@ export class Renderer {
     }
 
     render(selectedEntity, selectedBuilding, hoveredEntity, hoveredBuilding) {
-        if (!this.assetsLoaded) return;
+        this.assetsLoaded = true; // No longer dependent on loading sprites
         
         this.clearCanvas();
         drawBackground(this.ctx, this.canvas.width, this.canvas.height);
