@@ -98,7 +98,7 @@ export function finishDepositing(entity) {
     entity.task.idle();
 }
 
-export function gatherFromTargetNode(entity) {
+export function gatherFromTargetNode(entity, deltaTime) {
     if (!entity.task.targetNode || entity.isInventoryFull()) {
         entity.task.clearTarget();
         if (entity.isInventoryFull()) {
@@ -109,21 +109,40 @@ export function gatherFromTargetNode(entity) {
         return;
     }
 
-    const gathered = entity.world.resourceManager.gatherFrom(entity.task.targetNode);
-    if (gathered) {
-        entity.inventory.add(gathered);
-        entity.vitals.increaseEnergy(5);
-        // Don't log every single gather event to reduce spam.
+    // Set a more specific task name for UI clarity
+    const resourceType = entity.task.targetNode.type;
+    const taskName = `Harvesting ${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
+    if (entity.task.current !== taskName) {
+        entity.task.set(taskName, entity.task.targetNode);
     }
+    
+    // Time-based harvesting.
+    // This is where skill modifiers would go in the future.
+    const harvestingSpeed = 1.0; // Base speed
+    const requiredProgress = 2000; // 2 seconds per unit at base speed
 
-    // Decide if we should continue gathering or go home
-    if (entity.isInventoryFull() || entity.task.targetNode.amount <= 0) {
-        entity.task.clearTarget();
-        if (entity.isInventoryFull()) {
-            Actions.depositResources(entity);
-        } else {
-            // Node is empty, find something else to do
-            entity.task.idle();
+    entity.task.harvestingProgress += deltaTime * harvestingSpeed;
+
+    if (entity.task.harvestingProgress >= requiredProgress) {
+        entity.task.harvestingProgress = 0; // Reset for next unit
+
+        const gathered = entity.world.resourceManager.gatherFrom(entity.task.targetNode);
+        if (gathered) {
+            entity.inventory.add(gathered);
+            entity.vitals.increaseEnergy(2); // Small energy boost for success
+            // Don't log every single gather event to reduce spam.
+        }
+
+        // Decide if we should continue gathering or go home after getting one unit
+        if (entity.isInventoryFull() || entity.task.targetNode.amount <= 0) {
+            entity.task.clearTarget();
+            if (entity.isInventoryFull()) {
+                Actions.depositResources(entity);
+            } else {
+                // Node is empty, find something else to do
+                entity.task.idle();
+            }
         }
     }
+    // If progress is not complete, the entity remains here to continue harvesting on the next update.
 }

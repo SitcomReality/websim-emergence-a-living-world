@@ -117,6 +117,17 @@
             opacity: 1;
         }
 
+        .entity-harvest-indicator {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            text-shadow: 0 0 4px rgba(0,0,0,0.5);
+            animation: processing-pulse 1.5s infinite ease-in-out;
+            pointer-events: none;
+        }
+
         .entity.farmer { background-image: url('farmer_sprite.png'); }
         .entity.trader { background-image: url('trader_sprite.png'); }
         .entity.crafter { background-image: url('crafter_sprite.png'); }

@@ -41,6 +41,20 @@ function drawNameplate(ctx, entity) {
     ctx.fillText(name, entity.x, entity.y - 22);
 }
 
+function drawHarvestIndicator(ctx, entity) {
+    if (!entity.currentTask.startsWith('Harvesting')) return;
+
+    const resourceType = entity.currentTask.split(' ')[1];
+    let icon = '⛏️'; // Default
+    if (resourceType === 'Wood') icon = '🪓';
+    if (resourceType === 'Food') icon = '🧺';
+
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, entity.x, entity.y - 25);
+}
+
 export function drawEntities(ctx, entities, selectedEntity, hoveredEntity, images) {
     entities.forEach(entity => {
         const sprite = images['creature_sprite.png'];
@@ -68,6 +82,10 @@ export function drawEntities(ctx, entities, selectedEntity, hoveredEntity, image
         drawCarriedResources(ctx, entity);
 
         ctx.restore();
+
+        if (entity.currentTask.startsWith('Harvesting')) {
+            drawHarvestIndicator(ctx, entity);
+        }
 
         if (hoveredEntity && entity.id === hoveredEntity.id) {
             drawNameplate(ctx, entity);

@@ -5,6 +5,7 @@ export class Task {
         this.targetNode = null;
         this.targetNodeId = null; // for saving
         this.processingJob = null; // For processing tasks { rawType, processedType, amount }
+        this.harvestingProgress = 0; // For time-based gathering
         this.actionTimer = Math.random() * 2000;
         this.actionInterval = 3000 + Math.random() * 4000;
     }
@@ -27,6 +28,7 @@ export class Task {
         this.current = taskName;
         this.targetNode = targetNode;
         this.processingJob = null;
+        this.harvestingProgress = 0; // Reset progress on new task
     }
     
     setProcessing(job, building) {
@@ -42,6 +44,7 @@ export class Task {
     clearTarget() {
         this.targetNode = null;
         this.processingJob = null;
+        this.harvestingProgress = 0;
     }
 
     serialize() {
@@ -51,6 +54,7 @@ export class Task {
             actionTimer: this.actionTimer,
             actionInterval: this.actionInterval,
             processingJob: this.processingJob,
+            harvestingProgress: this.harvestingProgress,
         };
     }
     
@@ -61,6 +65,7 @@ export class Task {
         this.actionInterval = data.actionInterval;
         this.targetNodeId = data.targetNodeId; // Store for linking
         this.processingJob = data.processingJob;
+        this.harvestingProgress = data.harvestingProgress || 0;
     }
     
     linkSavedData(world) {

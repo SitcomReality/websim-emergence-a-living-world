@@ -73,6 +73,7 @@ export function gatherResource(entity, resourceType) {
     if (targetNode) {
         entity.targetX = targetNode.x;
         entity.targetY = targetNode.y;
+        // Set a generic gathering task initially. It will be specified once harvesting starts.
         entity.task.set(`gathering ${resourceType}`, targetNode);
     } else {
         // If no node of that type is found, maybe explore?

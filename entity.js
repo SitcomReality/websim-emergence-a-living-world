@@ -96,8 +96,10 @@ export class Entity {
 
         // --- Action Handlers ---
         // If at target node, try to gather
-        if (this.currentTask.startsWith('gathering') && this.targetNode && this.movement.isAtTarget()) {
-            ActionHandler.gatherFromTargetNode(this);
+        if (this.currentTask.startsWith('gathering') || this.currentTask.startsWith('Harvesting')) {
+            if (this.targetNode && this.movement.isAtTarget()) {
+                ActionHandler.gatherFromTargetNode(this, this.world.lastDeltaTime);
+            }
         }
 
         // If returning to deposit, check if arrived
