@@ -113,6 +113,9 @@ function updateSelectedEntityPanel(entity) {
         ? info.inventory.map(item => `${item.amount.toFixed(1)} ${item.type}`).join(', ')
         : 'nothing';
 
+    // Get memory insights
+    const memoryInsights = getMemoryInsights(entity);
+
     contentEl.innerHTML = `
         <!-- Identity & Skills Section -->
         <div class="selection-section">
@@ -137,6 +140,17 @@ function updateSelectedEntityPanel(entity) {
             </div>
         </div>
 
+        <!-- Memory & Learning Section -->
+        <div class="selection-section">
+            <div class="selection-section-title">Memory & Learning</div>
+            <div class="section-subsection-title">Known Locations</div>
+            <div class="memory-text">${memoryInsights.locations}</div>
+            <div class="section-subsection-title">Social Knowledge</div>
+            <div class="memory-text">${memoryInsights.social}</div>
+            <div class="section-subsection-title">Learning Rate</div>
+            <div class="memory-text">${memoryInsights.learningRate}</div>
+        </div>
+
         <!-- Possessions Section -->
         <div class="selection-section">
             <div class="selection-section-title">Possessions</div>
@@ -154,6 +168,36 @@ function updateSelectedEntityPanel(entity) {
             </div>
         </div>
     `;
+}
+
+function getMemoryInsights(entity) {
+    const memory = entity.memory;
+    
+    // Count known resource locations by type
+    const locationCounts = {};
+    for (const memData of memory.resourceLocations.values()) {
+        locationCounts[memData.type] = (locationCounts[memData.type] || 0) + 1;
+    }
+    
+    const locationText = Object.keys(locationCounts).length > 0 
+        ? Object.entries(locationCounts).map(([type, count]) => `${count} ${type}`).join(', ')
+        : 'None remembered';
+    
+    // Count social relationships in memory
+    const socialCount = memory.socialHistory.size;
+    const trustedCount = Array.from(memory.socialHistory.values()).filter(h => h.trustLevel > 0.7).length;
+    
+    const socialText = socialCount > 0 
+        ? `${socialCount} people (${trustedCount} trusted)`
+        : 'No social memories';
+    
+    const learningRateText = `${(memory.learningRate * 100).toFixed(0)}% (${memory.learningRate > 0.15 ? 'Fast' : memory.learningRate > 0.12 ? 'Average' : 'Slow'} learner)`;
+    
+    return {
+        locations: locationText,
+        social: socialText,
+        learningRate: learningRateText
+    };
 }
 
 function updateSelectedBuildingPanel(building, world) {

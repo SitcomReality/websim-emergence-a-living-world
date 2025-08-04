@@ -117,6 +117,14 @@ export class InteractionManager {
                         entity1.vitals.increaseHappiness(15);
                         entity2.vitals.increaseHappiness(15);
                         
+                        // Learn from trade experience
+                        entity1.memory.updateStrategy('socialApproaches', 'trading', true);
+                        entity2.memory.updateStrategy('socialApproaches', 'trading', true);
+                        
+                        // Update trade preferences in memory
+                        entity1.memory.strategies.tradePreferences.set(need, (entity1.memory.strategies.tradePreferences.get(need) || 0) + 0.1);
+                        entity2.memory.strategies.tradePreferences.set(give, (entity2.memory.strategies.tradePreferences.get(give) || 0) + 0.1);
+                        
                         // Set a cooldown to prevent immediate back-and-forth trades
                         const cooldownKey = [entity1.id, entity2.id].sort().join('-');
                         this.tradeCooldowns.set(cooldownKey, 5000 + Math.random() * 5000); // 5-10 second cooldown
@@ -126,6 +134,11 @@ export class InteractionManager {
                 }
             }
         }
+        
+        // Learn from failed trade attempts
+        entity1.memory.updateStrategy('socialApproaches', 'trading', false);
+        entity2.memory.updateStrategy('socialApproaches', 'trading', false);
+        
         return false;
     }
 

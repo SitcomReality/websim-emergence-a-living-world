@@ -110,6 +110,16 @@ export function getPossibleActions(entity, canTradeProfitably) {
             });
         }
 
+        // Learning and mentorship activities
+        const hasSkillsToImprove = Object.values(entity.personality.skills).some(level => level < 1.5);
+        if (hasSkillsToImprove && personality.traits.curiosity > 0.3) {
+            actions.push({ 
+                name: 'seek_mentor', 
+                execute: () => Actions.seekMentor(entity),
+                skillLevel: 1.0 
+            });
+        }
+
         // Spiritual/Reflective activities
         if (personality.traits.curiosity > 0.6 && entity.vitals.happiness < 70) {
             actions.push({ 
@@ -189,12 +199,19 @@ export function weighActions(entity, actions) {
                 weight *= personality.traits.curiosity * (1.2 - vitals.happiness / 100);
                 break;
             
-            default:
-                // Handle specialization actions (e.g., specialize_wood)
-                if (action.name.startsWith('specialize_')) {
-                    weight *= action.skillLevel * 2; // Strong preference for specialization
-                    weight *= personality.traits.productivity + 0.5;
-                }
+            case 'seek_mentor':
+                weight *= personality.traits.curiosity * 1.8;
+                weight *= (1.2 - vitals.happiness / 100); // More likely when seeking improvement
+                break;
+        }
+        
+        // Memory-based weight adjustments
+        if (action.name.startsWith('gather') || action.name.startsWith('specialize')) {
+            const resourceType = action.name.includes('_') ? action.name.split('_')[1] : action.name.replace('gather_', '');
+            const bestStrategy = entity.memory.getBestStrategy('gatheringPatterns');
+            if (bestStrategy && bestStrategy.includes(resourceType)) {
+                weight *= 1.3; // Boost weight for strategies we've learned work well
+            }
         }
         
         return { ...action, weight: Math.max(0.1, weight) };

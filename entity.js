@@ -14,6 +14,7 @@ import * as Perception from './entity/perception.js';
 import { State } from './entity/components/state.js';
 import { ResourceManager } from './entity/components/resource_manager.js';
 import { RelationshipManager } from './entity/components/relationship_manager.js';
+import { Memory } from './entity/components/memory.js';
 
 export class Entity {
     constructor(x, y, world, hasHome = false) {
@@ -25,6 +26,7 @@ export class Entity {
         this.state = new State(this);
         this.resourceManager = new ResourceManager(this);
         this.relationshipManager = new RelationshipManager(this);
+        this.memory = new Memory(this);
 
         this.personality = new Personality();
         this.decisionMaker = new DecisionMaker(this);
@@ -88,6 +90,7 @@ export class Entity {
         this.task.update(deltaTime);
         this.movement.update(deltaTime);
         this.appearance.update(deltaTime);
+        this.memory.update(deltaTime);
         
         // Perform actions based on personality and needs (commit until current task finishes)
         if (this.task.shouldPerformAction()) {
@@ -152,7 +155,34 @@ export class Entity {
     }
     
     findClosestResourceNode(resourceType) {
+        // Use memory to prefer known good locations
+        const knownLocations = this.memory.getBestKnownLocations(resourceType, 2);
+        
+        // Check if any remembered locations still exist and are available
+        for (const memory of knownLocations) {
+            const node = this.world.getResourceNodes().find(n => 
+                n.type === resourceType &&
+                n.amount > 0 &&
+                Math.abs(n.x - memory.location.x) < 20 && // Allow for some movement
+                Math.abs(n.y - memory.location.y) < 20 &&
+                !this.isNodeBusy(n)
+            );
+            
+            if (node) {
+                return node; // Return the best remembered location that's still valid
+            }
+        }
+        
+        // Fall back to regular perception if no good memories
         return Perception.findClosestResourceNode(this, resourceType);
+    }
+
+    isNodeBusy(node) {
+        const otherEntities = this.world.getEntities().filter(e => e.id !== this.id);
+        return otherEntities.some(e => 
+            e.task && (e.task.current.startsWith('gathering') || e.task.current.startsWith('Harvesting')) && 
+            e.task.target && e.task.target.id === node.id
+        );
     }
     
     findNearbyEntity(range = 100) {
@@ -211,7 +241,8 @@ export class Entity {
             relationships: this.relationships.serialize(),
             vitals: this.vitals.serialize(),
             task: this.task.serialize(),
-            movement: this.movement.serialize()
+            movement: this.movement.serialize(),
+            memory: this.memory.serialize()
         };
     }
 
@@ -231,6 +262,7 @@ export class Entity {
         this.vitals.deserialize(data.vitals);
         this.task.deserialize(data.task);
         this.movement.deserialize(data.movement);
+        this.memory.deserialize(data.memory);
     }
 
     linkSavedData() {

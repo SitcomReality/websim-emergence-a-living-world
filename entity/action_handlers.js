@@ -109,6 +109,12 @@ export function finishDepositing(entity) {
 
 export function gatherFromTargetNode(entity, deltaTime) {
     if (!entity.task.target || entity.isInventoryFull()) {
+        // Remember the outcome of this gathering attempt
+        if (entity.task.target) {
+            const success = !entity.isInventoryFull(); // Success if we're not leaving due to full inventory
+            entity.memory.rememberResourceLocation(entity.task.target, success);
+        }
+        
         entity.task.clearTarget();
         if (entity.isInventoryFull()) {
             Actions.depositResources(entity);
@@ -156,6 +162,16 @@ export function gatherFromTargetNode(entity, deltaTime) {
             if (yieldMultiplier > 1.3) {
                 entity.world.eventSystem.addEvent(`${entity.name} made an excellent harvest! (${totalAmount.toFixed(1)} ${baseGathered.type})`);
             }
+            
+            // Remember this as a successful gathering
+            entity.memory.rememberResourceLocation(entity.task.target, true);
+            
+            // Learn about gathering strategies
+            const strategy = skillLevel > 1.5 ? 'skilled_gathering' : 'basic_gathering';
+            entity.memory.updateStrategy('gatheringPatterns', `${baseGathered.type}_${strategy}`, yieldMultiplier > 1.2);
+        } else {
+            // Remember this as a failed gathering (node was empty)
+            entity.memory.rememberResourceLocation(entity.task.target, false);
         }
 
         // Decide if we should continue gathering or go home after getting one unit
@@ -275,6 +291,10 @@ export function performCreativeActivity(entity, deltaTime) {
                         entity.vitals.increaseHappiness(20);
                         student.vitals.increaseHappiness(15);
                         entity.updateRelationshipValue(student.id, 0.15);
+                        
+                        // Both teacher and student learn from this interaction
+                        student.memory.learnFromEntity(entity, skill, true);
+                        entity.memory.updateStrategy('socialApproaches', 'teaching', true);
                     } else {
                         // Bad teaching can actually make things worse
                         if (teacherLevel < 1.2 && Math.random() < 0.3) {
@@ -285,6 +305,10 @@ export function performCreativeActivity(entity, deltaTime) {
                         } else {
                             entity.world.eventSystem.addEvent(`${entity.getName()} tried to teach ${student.getName()}, but the lesson didn't stick.`);
                         }
+                        
+                        // Learn from failed teaching
+                        student.memory.learnFromEntity(entity, skill, false);
+                        entity.memory.updateStrategy('socialApproaches', 'teaching', false);
                     }
                     entity.task.idle();
                 }

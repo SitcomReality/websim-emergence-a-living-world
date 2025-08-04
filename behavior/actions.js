@@ -180,12 +180,28 @@ export function teachSkill(entity) {
         return;
     }
 
-    // Find a skill we're good at that they could improve
-    const ourSkills = entity.personality.getBestSkills(3);
-    const skillToTeach = ourSkills.find(([skillName, ourLevel]) => {
-        const theirLevel = nearbyEntity.personality.getSkill(skillName);
-        return ourLevel > theirLevel + 0.3; // We must be significantly better
-    });
+    // Use memory to find the best skill to teach
+    let skillToTeach = null;
+    
+    // First, check if we remember this entity and know what they need
+    const socialHistory = entity.memory.socialHistory.get(nearbyEntity.id);
+    if (socialHistory && socialHistory.knownSkills) {
+        // Look for skills where we're much better than what we remember them being
+        const ourSkills = entity.personality.getBestSkills(3);
+        skillToTeach = ourSkills.find(([skillName, ourLevel]) => {
+            const rememberedLevel = socialHistory.knownSkills[skillName] || 0.5;
+            return ourLevel > rememberedLevel + 0.4; // We must be significantly better than we remember them being
+        });
+    }
+    
+    // Fallback to the original logic if memory doesn't help
+    if (!skillToTeach) {
+        const ourSkills = entity.personality.getBestSkills(3);
+        skillToTeach = ourSkills.find(([skillName, ourLevel]) => {
+            const theirLevel = nearbyEntity.personality.getSkill(skillName);
+            return ourLevel > theirLevel + 0.3; // We must be significantly better
+        });
+    }
 
     if (skillToTeach) {
         entity.targetX = nearbyEntity.x;
@@ -198,6 +214,33 @@ export function teachSkill(entity) {
         entity.world.eventSystem.addEvent(`${entity.getName()} is teaching ${skillToTeach[0].replace('_', ' ')} to ${nearbyEntity.getName()}.`);
     } else {
         seekSocialInteraction(entity);
+    }
+}
+
+// New action: Seek out the best teacher for a skill we want to improve
+export function seekMentor(entity) {
+    // Find our worst skills that could be improved
+    const skillEntries = Object.entries(entity.personality.skills);
+    const weakSkills = skillEntries
+        .filter(([_, level]) => level < 1.5) // Skills that aren't already excellent
+        .sort((a, b) => a[1] - b[1]); // Sort by lowest first
+    
+    if (weakSkills.length === 0) {
+        wander(entity); // Already excellent at everything!
+        return;
+    }
+    
+    const skillToImprove = weakSkills[0][0];
+    const teacher = entity.memory.findBestTeacher(entity.world.getEntities(), skillToImprove);
+    
+    if (teacher) {
+        entity.targetX = teacher.x;
+        entity.targetY = teacher.y;
+        entity.task.set('seeking mentorship', { teacher: teacher, skill: skillToImprove });
+        entity.world.eventSystem.addEvent(`${entity.getName()} is seeking to learn ${skillToImprove.replace('_', ' ')} from ${teacher.getName()}.`);
+    } else {
+        // No good teacher found, maybe explore to meet new people
+        explore(entity);
     }
 }
 
