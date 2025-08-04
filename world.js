@@ -1,7 +1,7 @@
 import { Entity } from './entity.js';
 import { ResourceManager } from './resource.js';
 import { EventSystem } from './events.js';
-import { BuildingManager } from './building.js';
+import { BuildingManager } from './building/building_manager.js';
 
 export class World {
     constructor() {

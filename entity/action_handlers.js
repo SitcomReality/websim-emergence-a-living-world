@@ -1,4 +1,5 @@
 import * as Actions from '../behavior/actions.js';
+import { Building } from '../building/building.js';
 
 export function finishBuildingStorageShed(entity) {
     if (!entity.homeLocation || entity.storageShed) return;
@@ -44,7 +45,7 @@ export function finishDepositing(entity) {
     if (entity.inventory.items.length === 0) return;
 
     const depositPoint = entity.task.targetNode;
-    if (!depositPoint || !(depositPoint instanceof Object) || !('inventory' in depositPoint)) {
+    if (!depositPoint || !(depositPoint instanceof Building) || !('inventory' in depositPoint)) {
         // Fallback: If no valid building, deposit to personal (home) storage
         entity.inventory.items.forEach(item => {
             entity.resources[item.type] = (entity.resources[item.type] || 0) + item.amount;

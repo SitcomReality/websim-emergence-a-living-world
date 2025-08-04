@@ -1,4 +1,5 @@
 import { Renderer } from './rendering/renderer.js';
+import { Building } from './building/building.js';
 
 export class UI {
     constructor(world) {
