@@ -5,7 +5,8 @@ import * as Actions from '../actions.js';
 // Get a list of potential actions based on state and personality
 export function getPossibleActions(entity, canTradeProfitably) {
     const actions = [];
-    const { personality, resources, home } = entity;
+    const { personality, home } = entity;
+    const resources = entity.getResources();
 
     // Skill-influenced resource gathering - prefer gathering resources we're good at
     const bestSkills = personality.getBestSkills(3);
@@ -145,7 +146,8 @@ export function getPossibleActions(entity, canTradeProfitably) {
 
 // Assign weights to actions based on personality and circumstances
 export function weighActions(entity, actions) {
-    const { personality, resources, vitals, home } = entity;
+    const { personality, vitals, home } = entity;
+    const resources = entity.getResources();
 
     return actions.map(action => {
         let weight = 1.0; // Base weight
