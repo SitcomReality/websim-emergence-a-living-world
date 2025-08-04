@@ -96,7 +96,7 @@ function drawProceduralEntity(ctx, entity, isSelected, isHovered) {
     // Draw eyes - 4x size, adjusted spacing
     const eyeOpenness = appearance.eyeOpenness; // 0 = closed, 1 = fully open
     const eyeWidth = 4 * 4;          // 4x width
-    const eyeHeight = 4 * eyeOpenness; // 4x height
+    const eyeHeight = 8 * eyeOpenness; // Increased from 4x to 8x for taller eyes
     const eyeY = -2;
     
     // Left eye - moved outward to prevent overlap
