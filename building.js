@@ -15,13 +15,14 @@ const BUILDING_SPECS = {
 };
 
 export class Building {
-    constructor(ownerId, x, y, type = 'home') {
+    constructor(ownerId, x, y, type = 'home', world) {
         this.id = `building_${Math.random().toString(36).substring(2, 9)}`;
         this.ownerId = ownerId;
         this.x = x;
         this.y = y;
         this.type = type;
         this.level = 1;
+        this.rotation = 0; // New property for rotation
         
         // Properties for all buildings
         this.inventory = { food: 0, water: 0, wood: 0, stone: 0 };
@@ -49,6 +50,10 @@ export class Building {
         } else if (type === 'home_construction_site') {
             this.width = 28;
             this.height = 28;
+            const owner = world.entities.find(e => e.id === ownerId);
+            if(owner) {
+                this.rotation = owner.settlementRotation || 0;
+            }
         }
     }
 
@@ -88,7 +93,8 @@ export class BuildingManager {
     }
 
     createHomeForEntity(entity, x, y) {
-        const home = new Building(entity.id, x, y, 'home');
+        const home = new Building(entity.id, x, y, 'home', this.world);
+        home.rotation = entity.settlementRotation || 0;
         this.buildings.push(home);
         // Transfer resources from owner's personal supply to new home
         home.inventory = { ...entity.resources };
@@ -97,13 +103,17 @@ export class BuildingManager {
     }
 
     createStorageShed(ownerId, x, y) {
-        const shed = new Building(ownerId, x, y + 15, 'storage'); // Place slightly below home plot
+        const shed = new Building(ownerId, x, y + 15, 'storage', this.world); // Place slightly below home plot
+        const owner = this.world.entities.find(e => e.id === ownerId);
+        if (owner) {
+            shed.rotation = owner.settlementRotation || 0;
+        }
         this.buildings.push(shed);
         return shed;
     }
 
     startHomeConstruction(entity, x, y) {
-        const site = new Building(entity.id, x, y, 'home_construction_site');
+        const site = new Building(entity.id, x, y, 'home_construction_site', this.world);
         
         // Check if resources are in the shed and consume them
         if (entity.storageShed && entity.storageShed.hasSufficientResourcesFor('home')) {
@@ -154,10 +164,34 @@ export class BuildingManager {
         let bestSpot = null;
         let maxScore = -Infinity;
 
-        // Get all locations already claimed by other entities
-        const claimedSpots = this.world.getEntities()
+        const allHomes = this.world.getEntities()
             .filter(e => e.id !== entity.id && e.homeLocation)
-            .map(e => e.homeLocation);
+            .map(e => ({ x: e.homeLocation.x, y: e.homeLocation.y, rotation: e.settlementRotation }));
+
+        // Pioneer logic: high risktaking entities might start a new settlement
+        const isPioneer = allHomes.length < 2 || (entity.personality.traits.risktaking > 0.7 && Math.random() < 0.35);
+        let settlementToJoin = null;
+
+        if (!isPioneer && allHomes.length > 0) {
+            // Find the closest existing settlement to join.
+            // A simple approach: find the closest home and consider its settlement.
+            let minDistance = Infinity;
+            for (const home of allHomes) {
+                const dist = this.world.getDistance(entity, home);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    settlementToJoin = home;
+                }
+            }
+        }
+        
+        if (isPioneer) {
+            entity.settlementRotation = Math.random() * Math.PI * 2;
+        } else if (settlementToJoin) {
+            entity.settlementRotation = settlementToJoin.rotation;
+        } else {
+            entity.settlementRotation = 0; // Default if no homes exist yet.
+        }
 
         for (let x = gridSize; x < this.world.width - gridSize; x += gridSize) {
             for (let y = gridSize; y < this.world.height - gridSize; y += gridSize) {
@@ -166,20 +200,39 @@ export class BuildingManager {
                 if (this.getBuildingAt(x, y, 30)) continue;
 
                 // Avoid building on a spot another entity has already claimed
-                const isClaimed = claimedSpots.some(spot => {
+                const isClaimed = allHomes.some(spot => {
                     const dx = spot.x - x;
                     const dy = spot.y - y;
-                    return (dx * dx + dy * dy) < 900; // 30*30, check within a radius
+                    return (dx * dx + dy * dy) < (gridSize * gridSize * 0.8); // check within grid cell
                 });
                 if (isClaimed) continue;
 
-                // Proximity to resources
+                // Score based on proximity to resources
                 const waterNode = this.world.resourceManager.getNodes().find(n => n.type === 'water');
                 const foodNode = this.world.resourceManager.getNodes().find(n => n.type === 'food');
                 if (waterNode) score += 5000 / this.world.getDistance({x,y}, waterNode);
                 if (foodNode) score += 5000 / this.world.getDistance({x,y}, foodNode);
                 
-                // Add some random fuzz to prevent all entities from choosing the same meta-optimal spot
+                // Score based on distance to settlements (pioneer vs settler)
+                if (allHomes.length > 0) {
+                    let minDistanceToHome = Infinity;
+                    allHomes.forEach(home => {
+                        const dist = this.world.getDistance({x, y}, home);
+                        if (dist < minDistanceToHome) {
+                            minDistanceToHome = dist;
+                        }
+                    });
+
+                    if (isPioneer) {
+                        // Reward being far from existing settlements, but not infinitely far
+                        score += Math.min(minDistanceToHome, 400); 
+                    } else {
+                        // Reward being close to existing settlements
+                        score -= minDistanceToHome * 0.5;
+                    }
+                }
+
+                // Add some random fuzz
                 score += Math.random() * 50;
 
                 if (score > maxScore) {
@@ -188,6 +241,14 @@ export class BuildingManager {
                 }
             }
         }
+        
+        if (bestSpot) {
+            // Add random offset to break the grid pattern
+            const offsetRange = gridSize / 3;
+            bestSpot.x += (Math.random() - 0.5) * offsetRange;
+            bestSpot.y += (Math.random() - 0.5) * offsetRange;
+        }
+
         return bestSpot;
     }
 
@@ -222,7 +283,7 @@ export class BuildingManager {
         this.buildings = [];
         if (data && data.buildings) {
             this.buildings = data.buildings.map(buildingData => {
-                const building = new Building(buildingData.ownerId, buildingData.x, buildingData.y, buildingData.type);
+                const building = new Building(buildingData.ownerId, buildingData.x, buildingData.y, buildingData.type, this.world);
                 Object.assign(building, buildingData);
                 return building;
             });

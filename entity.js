@@ -17,6 +17,7 @@ export class Entity {
         this.home = null;
         this.storageShed = null;
         this.homeLocation = null; // Planned {x, y} for home
+        this.settlementRotation = 0; // The rotation of the settlement this entity belongs to
         this.homeId = null; // for saving
         this.storageShedId = null; // for saving
         this.targetNodeId = null; // for saving
@@ -398,6 +399,7 @@ export class Entity {
             homeId: this.home ? this.home.id : null,
             storageShedId: this.storageShed ? this.storageShed.id : null,
             homeLocation: this.homeLocation,
+            settlementRotation: this.settlementRotation,
             personality: this.personality.traits,
             resources: this.resources,
             inventory: this.inventory.serialize(),
@@ -420,6 +422,7 @@ export class Entity {
             y: data.y,
             name: data.name,
             homeLocation: data.homeLocation,
+            settlementRotation: data.settlementRotation || 0,
             resources: data.resources,
             targetX: data.targetX,
             targetY: data.targetY,

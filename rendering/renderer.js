@@ -166,6 +166,7 @@ export class Renderer {
     drawBuildingSelection(building, selectedBuilding, hoveredBuilding) {
         this.ctx.save();
         this.ctx.translate(building.x, building.y);
+        this.ctx.rotate(building.rotation || 0);
 
         if (selectedBuilding && building.id === selectedBuilding.id) {
             this.ctx.fillStyle = 'rgba(255, 255, 0, 0.5)';
@@ -183,10 +184,14 @@ export class Renderer {
     }
 
     drawHome(building, selectedBuilding, hoveredBuilding) {
-        const x = building.x - building.width / 2;
-        const y = building.y - building.height / 2;
-
         this.drawBuildingSelection(building, selectedBuilding, hoveredBuilding);
+
+        this.ctx.save();
+        this.ctx.translate(building.x, building.y);
+        this.ctx.rotate(building.rotation || 0);
+
+        const x = -building.width / 2;
+        const y = -building.height / 2;
 
         this.ctx.fillStyle = '#A1887F';
         this.ctx.strokeStyle = '#5D4037';
@@ -196,34 +201,38 @@ export class Renderer {
 
         this.ctx.fillStyle = '#795548';
         this.ctx.beginPath();
-        this.ctx.moveTo(building.x - 14, y);
-        this.ctx.lineTo(building.x + 14, y);
-        this.ctx.lineTo(building.x, y - 10);
+        this.ctx.moveTo(x - 2, y);
+        this.ctx.lineTo(x + building.width + 2, y);
+        this.ctx.lineTo(x + building.width / 2, y - 10);
         this.ctx.closePath();
         this.ctx.fill();
+        this.ctx.restore();
     }
 
     drawStorage(building, selectedBuilding, hoveredBuilding) {
-        const x = building.x - building.width / 2;
-        const y = building.y - building.height / 2;
-
         this.drawBuildingSelection(building, selectedBuilding, hoveredBuilding);
+        
+        this.ctx.save();
+        this.ctx.translate(building.x, building.y);
+        this.ctx.rotate(building.rotation || 0);
+
+        const x = -building.width / 2;
+        const y = -building.height / 2;
         
         this.ctx.fillStyle = '#c7a76c';
         this.ctx.strokeStyle = '#8d6e63';
         this.ctx.lineWidth = 2;
         this.ctx.fillRect(x, y, building.width, building.height);
         this.ctx.strokeRect(x, y, building.width, building.height);
+        this.ctx.restore();
     }
 
     drawConstructionSite(building, selectedBuilding, hoveredBuilding) {
-        const x = building.x - building.width / 2;
-        const y = building.y - building.height / 2;
-
         this.drawBuildingSelection(building, selectedBuilding, hoveredBuilding);
         
         this.ctx.save();
         this.ctx.translate(building.x, building.y);
+        this.ctx.rotate(building.rotation || 0);
 
         // Cleared ground
         this.ctx.fillStyle = 'rgba(93, 64, 55, 0.4)'; // dark muddy brown
