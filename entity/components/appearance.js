@@ -10,6 +10,7 @@ export class Appearance {
         this.gazeTarget = { x: entity.x, y: entity.y };
         this.gazeTimer = 0;
         this.gazeDuration = 3000 + Math.random() * 2000;
+        this.blinkOffset = Math.random() * 4000; // For individual blink cycles
     }
 
     generateSkinColor() {
@@ -23,11 +24,11 @@ export class Appearance {
         let eyeOpenness = this.eyeOpenness;
         let mouthCurve = this.mouthCurve;
 
-        // Individual blinking logic - removed global sync
+        // Blinking logic
         const now = Date.now();
-        const blinkCycle = now % (4000 + Math.random() * 2000); // Vary cycle length per entity
-        const blinkDuration = 150 + Math.random() * 100; // Vary duration
-        const blinkChance = 0.0005 + Math.random() * 0.001; // Individual chance
+        const blinkCycle = (now + this.blinkOffset) % 4000; // 4-second cycle with individual offset
+        const blinkDuration = 150; // 150ms blink
+        const blinkChance = 0.002; // 0.2% chance per frame
         
         if (blinkCycle < blinkDuration || Math.random() < blinkChance) {
             eyeOpenness = 0.1; // Closed eyes
@@ -112,6 +113,7 @@ export class Appearance {
             gazeTarget: this.gazeTarget,
             gazeTimer: this.gazeTimer,
             gazeDuration: this.gazeDuration,
+            blinkOffset: this.blinkOffset,
         };
     }
 
@@ -125,5 +127,6 @@ export class Appearance {
         this.gazeTarget = data.gazeTarget || { x: this.entity.x, y: this.entity.y };
         this.gazeTimer = data.gazeTimer || 0;
         this.gazeDuration = data.gazeDuration || 4000;
+        this.blinkOffset = data.blinkOffset || Math.random() * 4000;
     }
 }
