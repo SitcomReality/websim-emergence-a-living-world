@@ -23,11 +23,11 @@ export class Appearance {
         let eyeOpenness = this.eyeOpenness;
         let mouthCurve = this.mouthCurve;
 
-        // Blinking logic
+        // Individual blinking logic - removed global sync
         const now = Date.now();
-        const blinkCycle = now % 4000; // 4-second cycle
-        const blinkDuration = 150; // 150ms blink
-        const blinkChance = 0.002; // 0.2% chance per frame
+        const blinkCycle = now % (4000 + Math.random() * 2000); // Vary cycle length per entity
+        const blinkDuration = 150 + Math.random() * 100; // Vary duration
+        const blinkChance = 0.0005 + Math.random() * 0.001; // Individual chance
         
         if (blinkCycle < blinkDuration || Math.random() < blinkChance) {
             eyeOpenness = 0.1; // Closed eyes
