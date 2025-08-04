@@ -140,6 +140,7 @@ export class BuildingManager {
             // Remove the old shed
             this.buildings = this.buildings.filter(b => b.id !== owner.storageShed.id);
             owner.storageShed = null;
+            owner.storageShedId = null; // Clear the saved ID too
         }
 
         // Remove the construction site
@@ -153,11 +154,24 @@ export class BuildingManager {
         let bestSpot = null;
         let maxScore = -Infinity;
 
+        // Get all locations already claimed by other entities
+        const claimedSpots = this.world.getEntities()
+            .filter(e => e.id !== entity.id && e.homeLocation)
+            .map(e => e.homeLocation);
+
         for (let x = gridSize; x < this.world.width - gridSize; x += gridSize) {
             for (let y = gridSize; y < this.world.height - gridSize; y += gridSize) {
                 let score = 0;
                 // Avoid building on top of existing buildings
                 if (this.getBuildingAt(x, y, 30)) continue;
+
+                // Avoid building on a spot another entity has already claimed
+                const isClaimed = claimedSpots.some(spot => {
+                    const dx = spot.x - x;
+                    const dy = spot.y - y;
+                    return (dx * dx + dy * dy) < 900; // 30*30, check within a radius
+                });
+                if (isClaimed) continue;
 
                 // Proximity to resources
                 const waterNode = this.world.resourceManager.getNodes().find(n => n.type === 'water');
@@ -165,7 +179,7 @@ export class BuildingManager {
                 if (waterNode) score += 5000 / this.world.getDistance({x,y}, waterNode);
                 if (foodNode) score += 5000 / this.world.getDistance({x,y}, foodNode);
                 
-                // Add some random fuzz
+                // Add some random fuzz to prevent all entities from choosing the same meta-optimal spot
                 score += Math.random() * 50;
 
                 if (score > maxScore) {

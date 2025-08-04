@@ -45,7 +45,7 @@ export class World {
                 Math.random() * (this.width - 40) + 20,
                 Math.random() * (this.height - 40) + 20,
                 this,
-                i === 0 // Make the first entity have a home for testing/initial state
+                false // No entities start with a home anymore
             );
             this.entities.push(entity);
         }
