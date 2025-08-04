@@ -15,6 +15,7 @@ export class World {
         this.cycleTimer = 0;
         this.cycleInterval = 5000; // 5 seconds per cycle
         this.tradeCooldowns = new Map();
+        this.interactionCooldowns = new Map();
         this.visualEffects = [];
     }
 
@@ -32,6 +33,7 @@ export class World {
         this.resourceManager.reset();
         this.buildingManager.reset();
         this.tradeCooldowns.clear();
+        this.interactionCooldowns.clear();
         this.visualEffects = [];
     }
 
@@ -59,6 +61,16 @@ export class World {
                 this.tradeCooldowns.delete(key);
             } else {
                 this.tradeCooldowns.set(key, newTime);
+            }
+        }
+        
+        // Update interaction cooldowns
+        for (const [key, value] of this.interactionCooldowns.entries()) {
+            const newTime = value - deltaTime;
+            if (newTime <= 0) {
+                this.interactionCooldowns.delete(key);
+            } else {
+                this.interactionCooldowns.set(key, newTime);
             }
         }
         
@@ -99,8 +111,9 @@ export class World {
     }
 
     handleEntityInteraction(entity1, entity2) {
-        // Check for trade opportunities
         const cooldownKey = [entity1.id, entity2.id].sort().join('-');
+
+        // Check for trade opportunities
         if (!this.tradeCooldowns.has(cooldownKey) && this.canTrade(entity1, entity2)) {
             // Lower the probability of random trades to make them more special
             if (Math.random() < 0.1) {
@@ -108,8 +121,16 @@ export class World {
             }
         }
 
+        // Check for relationship interaction cooldown
+        if (this.interactionCooldowns.has(cooldownKey)) {
+            return; // on cooldown, do nothing more
+        }
+
         // Update relationships
         this.updateRelationship(entity1, entity2);
+
+        // Set a cooldown for the next interaction to prevent spam
+        this.interactionCooldowns.set(cooldownKey, 3000 + Math.random() * 2000); // 3-5 second cooldown
     }
 
     canTrade(entity1, entity2) {
