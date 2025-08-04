@@ -3,6 +3,9 @@ function drawCarriedResources(ctx, entity) {
         food: '#8BC34A',
         wood: '#795548',
         stone: '#607D8B',
+        cooked_food: '#E65100', // Deep orange for cooked food
+        planks: '#AF8264',      // Lighter brown for planks
+        bricks: '#C62828',      // Reddish-brown for bricks
     };
 
     entity.inventory.items.forEach((item, index) => {

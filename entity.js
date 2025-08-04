@@ -44,6 +44,9 @@ export class Entity {
             food: Math.floor(Math.random() * 5) + 2,
             wood: Math.floor(Math.random() * 3) + 1,
             stone: Math.floor(Math.random() * 3) + 1,
+            cooked_food: 0,
+            planks: 0,
+            bricks: 0,
         };
         for (const resource in this.resources) {
             this.resources[resource] = Math.round(this.resources[resource] * 10) / 10;
@@ -204,6 +207,13 @@ export class Entity {
                 total[type] = (total[type] || 0) + depositPoint.inventory[type];
             }
         }
+        // Ensure all types are present for the UI
+        const allTypes = ['food', 'wood', 'stone', 'cooked_food', 'planks', 'bricks'];
+        allTypes.forEach(type => {
+            if (!total.hasOwnProperty(type)) {
+                total[type] = 0;
+            }
+        });
         return total;
     }
 

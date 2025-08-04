@@ -11,7 +11,7 @@ export class Building {
         this.rotation = 0; // New property for rotation
         
         // Properties for all buildings
-        this.inventory = { food: 0, water: 0, wood: 0, stone: 0 };
+        this.inventory = { food: 0, wood: 0, stone: 0, cooked_food: 0, planks: 0, bricks: 0 };
 
         // Properties for construction
         this.constructionProgress = 0;

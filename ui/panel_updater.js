@@ -156,9 +156,13 @@ function updateSelectedEntityPanel(entity) {
             </div>
             <div style="margin-top: 8px; font-size: 11px;">
                 <div>Resources (at home/storage):</div>
-                <div style="margin-left: 10px;">
-                    Food: ${info.resources.food.toFixed(1)}, Wood: ${info.resources.wood.toFixed(1)}<br>
-                    Stone: ${info.resources.stone.toFixed(1)}
+                <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px;">
+                    <span>Food: ${info.resources.food.toFixed(1)}</span>
+                    <span>C-Food: ${info.resources.cooked_food.toFixed(1)}</span>
+                    <span>Wood: ${info.resources.wood.toFixed(1)}</span>
+                    <span>Planks: ${info.resources.planks.toFixed(1)}</span>
+                    <span>Stone: ${info.resources.stone.toFixed(1)}</span>
+                    <span>Bricks: ${info.resources.bricks.toFixed(1)}</span>
                 </div>
             </div>
              <div style="margin-top: 8px; font-size: 11px;">
