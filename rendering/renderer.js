@@ -36,7 +36,7 @@ export class Renderer {
         this.clearCanvas();
         drawBackground(this.ctx, this.canvas.width, this.canvas.height);
         
-        drawResourceNodes(this.ctx, this.world.getResourceNodes());
+        drawResourceNodes(this.ctx, this.world.getResourceNodes(), this.world.getSaplings());
         drawBuildings(this.ctx, this.world.getBuildings(), selectedBuilding, hoveredBuilding, this.world);
         drawSelectionContextLines(this.ctx, selectedEntity);
         drawRelationships(this.ctx, this.world.getEntities(), selectedEntity);

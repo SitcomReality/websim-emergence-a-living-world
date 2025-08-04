@@ -1,11 +1,13 @@
 export class ResourceManager {
     constructor() {
         this.nodes = [];
+        this.saplings = []; // For seeds/saplings that will grow into new nodes
         this.resourceTotals = { food: 0, wood: 0, stone: 0 };
     }
 
     generateResources(worldWidth, worldHeight) {
         this.nodes = [];
+        this.saplings = [];
         
         // Generate different resource patterns
         this.generateFoodPatches(worldWidth, worldHeight);
@@ -97,7 +99,8 @@ export class ResourceManager {
             y: y,
             amount: amount,
             maxAmount: maxAmount,
-            regenerationRate: this.getRegenerationRate(type)
+            regenerationRate: this.getRegenerationRate(type),
+            isDepleted: false, // flag for removal
         };
         
         this.nodes.push(node);
@@ -153,6 +156,11 @@ export class ResourceManager {
         if (node.amount > 0) {
             const gathered = Math.min(1, node.amount);
             node.amount -= gathered;
+            
+            if (node.amount <= 0) {
+                node.isDepleted = true;
+            }
+
             this.updateTotalResources();
             
             return {
@@ -164,16 +172,79 @@ export class ResourceManager {
     }
 
     update(deltaTime) {
-        // Regenerate resources over time
+        // Regenerate stone resources over time
         this.nodes.forEach(node => {
-            if (node.amount < node.maxAmount) {
+            if (node.type === 'stone' && node.amount < node.maxAmount) {
                 const newAmount = node.amount + node.regenerationRate * (deltaTime / 1000);
                 node.amount = Math.min(node.maxAmount, newAmount);
-                node.amount = Math.round(node.amount * 10) / 10;
             }
         });
         
+        // Handle depleted nodes
+        const depletedNodes = this.nodes.filter(n => n.isDepleted);
+        depletedNodes.forEach(node => {
+            this.handleNodeDepletion(node);
+        });
+
+        if (depletedNodes.length > 0) {
+            this.nodes = this.nodes.filter(n => !n.isDepleted);
+        }
+
+        // Grow saplings
+        this.updateSaplings(deltaTime);
+
         this.updateTotalResources();
+    }
+    
+    handleNodeDepletion(node) {
+        if (node.type !== 'food' && node.type !== 'wood') {
+            return; // Only food and wood create saplings
+        }
+
+        const saplingCount = Math.floor(Math.random() * 4); // 0 to 3 saplings
+        for (let i = 0; i < saplingCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 10 + Math.random() * 20; // 10 to 30 pixels away
+            const x = node.x + Math.cos(angle) * distance;
+            const y = node.y + Math.sin(angle) * distance;
+
+            // Ensure sapling is within world bounds
+            const clampedX = Math.max(20, Math.min(this.world.width - 20, x));
+            const clampedY = Math.max(20, Math.min(this.world.height - 20, y));
+
+            this.saplings.push({
+                id: Math.random().toString(36).substring(2, 9),
+                type: node.type,
+                x: clampedX,
+                y: clampedY,
+                nextCheckTime: Date.now() + 45000, // First check after 45 seconds
+                isFirstCheck: true
+            });
+        }
+    }
+
+    updateSaplings() {
+        const now = Date.now();
+        const grownSaplingIds = new Set();
+
+        this.saplings.forEach(sapling => {
+            if (now >= sapling.nextCheckTime) {
+                if (Math.random() < 0.1) { // 10% chance to grow
+                    grownSaplingIds.add(sapling.id);
+                    this.createNode(sapling.type, sapling.x, sapling.y, 
+                        3 + Math.floor(Math.random() * 4), // new node amount
+                        5 + Math.floor(Math.random() * 3)  // new node max amount
+                    );
+                } else {
+                    // Not grown, schedule next check
+                    sapling.nextCheckTime += 5000; // try again in 5 seconds
+                }
+            }
+        });
+        
+        if (grownSaplingIds.size > 0) {
+            this.saplings = this.saplings.filter(s => !grownSaplingIds.has(s.id));
+        }
     }
 
     updateTotalResources() {
@@ -192,20 +263,27 @@ export class ResourceManager {
     getNodes() {
         return this.nodes;
     }
+    
+    getSaplings() {
+        return this.saplings;
+    }
 
     reset() {
         this.nodes = [];
+        this.saplings = [];
         this.resourceTotals = { food: 0, wood: 0, stone: 0 };
     }
 
     serialize() {
         return {
-            nodes: this.nodes
+            nodes: this.nodes,
+            saplings: this.saplings,
         };
     }
 
     deserialize(data) {
         this.nodes = data.nodes || [];
+        this.saplings = data.saplings || [];
         this.updateTotalResources();
     }
 }

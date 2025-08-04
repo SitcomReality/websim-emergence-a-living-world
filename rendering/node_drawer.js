@@ -62,8 +62,30 @@ function drawWaterNode(ctx, node) {
     ctx.fill();
 }
 
-export function drawResourceNodes(ctx, nodes) {
+function drawSapling(ctx, sapling) {
+    if (sapling.type === 'wood') {
+        ctx.fillStyle = '#A1887F'; // Light brown
+        ctx.fillRect(sapling.x - 1, sapling.y, 2, 5); // Tiny trunk
+        ctx.fillStyle = '#689F38'; // Light green
+        ctx.beginPath();
+        ctx.arc(sapling.x, sapling.y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+    } else if (sapling.type === 'food') {
+        ctx.fillStyle = '#689F38'; // Light green
+        ctx.beginPath();
+        ctx.arc(sapling.x, sapling.y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#EF5350'; // Red dot for berry/seed
+        ctx.beginPath();
+        ctx.arc(sapling.x + 1, sapling.y - 1, 1, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+}
+
+export function drawResourceNodes(ctx, nodes, saplings = []) {
     nodes.forEach(node => {
+        if (node.amount <= 0) return; // Don't draw depleted nodes
+
         ctx.globalAlpha = Math.max(0.3, node.amount / node.maxAmount);
         switch(node.type) {
             case 'food':
@@ -83,4 +105,8 @@ export function drawResourceNodes(ctx, nodes) {
         }
     });
     ctx.globalAlpha = 1;
+
+    saplings.forEach(sapling => {
+        drawSapling(ctx, sapling);
+    });
 }

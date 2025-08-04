@@ -277,6 +277,10 @@ export class World {
         return this.resourceManager.getNodes();
     }
 
+    getSaplings() {
+        return this.resourceManager.getSaplings();
+    }
+
     getCycleCount() {
         return this.cycleCount;
     }
@@ -318,6 +322,7 @@ export class World {
         this.cycleTimer = data.cycleTimer || 0;
 
         this.resourceManager.deserialize(data.resourceManager);
+        this.resourceManager.world = this; // Relink world reference
         this.buildingManager.deserialize(data.buildingManager, this);
 
         this.entities = data.entities.map(entityData => {
