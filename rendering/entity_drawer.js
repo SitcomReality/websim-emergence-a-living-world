@@ -93,47 +93,47 @@ function drawProceduralEntity(ctx, entity, isSelected, isHovered) {
     ctx.fill();
     ctx.stroke();
     
-    // Draw eyes
+    // Draw eyes - 4x size, adjusted spacing
     const eyeOpenness = appearance.eyeOpenness; // 0 = closed, 1 = fully open
-    const eyeWidth = 4;
-    const eyeHeight = 4 * eyeOpenness;
+    const eyeWidth = 4 * 4;          // 4x width
+    const eyeHeight = 4 * eyeOpenness; // 4x height
     const eyeY = -2;
     
-    // Left eye
+    // Left eye - moved outward to prevent overlap
     ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.ellipse(-3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+    ctx.ellipse(-8, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
     ctx.fill();
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.lineWidth = 0.5;
     ctx.stroke();
     
-    // Right eye  
+    // Right eye - moved outward to prevent overlap
     ctx.beginPath();
-    ctx.ellipse(3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+    ctx.ellipse(8, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
     ctx.fill();
     ctx.stroke();
     
-    // Draw pupils (only if eyes are open enough)
+    // Draw pupils - 4x size, adjusted for new eye positions
     if (eyeOpenness > 0.2) {
         ctx.fillStyle = 'black';
-        const pupilSize = Math.min(2, eyeHeight * 0.6);
+        const pupilSize = Math.min(8, eyeHeight * 0.6); // 4x pupil size
         
         // Create clipping region for pupils to stay within eye area
         ctx.save();
         ctx.beginPath();
-        ctx.ellipse(-3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
-        ctx.ellipse(3, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+        ctx.ellipse(-8, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
+        ctx.ellipse(8, eyeY, eyeWidth / 2, eyeHeight / 2, 0, 0, 2 * Math.PI);
         ctx.clip();
         
         // Left pupil
         ctx.beginPath();
-        ctx.arc(-3 + appearance.pupilOffsetX, eyeY + appearance.pupilOffsetY, pupilSize / 2, 0, 2 * Math.PI);
+        ctx.arc(-8 + appearance.pupilOffsetX, eyeY + appearance.pupilOffsetY, pupilSize / 2, 0, 2 * Math.PI);
         ctx.fill();
         
         // Right pupil
         ctx.beginPath();
-        ctx.arc(3 + appearance.pupilOffsetX, eyeY + appearance.pupilOffsetY, pupilSize / 2, 0, 2 * Math.PI);
+        ctx.arc(8 + appearance.pupilOffsetX, eyeY + appearance.pupilOffsetY, pupilSize / 2, 0, 2 * Math.PI);
         ctx.fill();
         
         ctx.restore();
