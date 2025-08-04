@@ -79,9 +79,15 @@ export class Entity {
         this.task.update(deltaTime);
         this.movement.update(deltaTime);
         
-        // Perform actions based on personality and needs
+        // Perform actions based on personality and needs (commit until current task finishes)
         if (this.task.shouldPerformAction()) {
-            this.performAction();
+            // Only pick a new action when truly idle
+            if (this.currentTask === 'idle') {
+                this.performAction();
+            } else {
+                // Delay re-decision to maintain commitment to the ongoing task
+                this.task.actionTimer = this.task.actionInterval - 50;
+            }
         }
 
         // --- Action Handlers ---
