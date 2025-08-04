@@ -238,6 +238,88 @@
             color: rgba(255,255,255,0.9);
         }
 
+        #selectionContent {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .selection-section {
+            background: rgba(0,0,0,0.2);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .selection-section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 4px;
+        }
+        
+        .section-subsection-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.8);
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }
+
+        .personality-desc {
+            font-style: italic;
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+        }
+        
+        .skills-list {
+             font-size: 11px; 
+             color: rgba(255,255,255,0.7);
+        }
+
+        .status-grid {
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        
+        .stat-item {
+            background: rgba(0,0,0,0.3);
+            padding: 4px 6px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .stat-item .label {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .inventory-text {
+            font-size: 12px;
+            color: rgba(255,255,255,0.8);
+            font-style: italic;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 8px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+        }
+
         .controls {
             display: flex;
             gap: 10px;
@@ -368,8 +450,7 @@
 
             <div class="info-panel" id="selectionPanel" style="display: none;">
                 <h3 id="selectionName">Selection</h3>
-                <div id="selectionInfo"></div>
-                <div id="selectionStats"></div>
+                <div id="selectionContent"></div>
             </div>
 
             <div class="info-panel">
