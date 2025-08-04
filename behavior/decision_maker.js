@@ -30,7 +30,13 @@ export class DecisionMaker {
             if (urgentNeed === 'food') {
                 this.findAndProcessResource('food');
             } else {
-                Actions.gatherResource(entity, urgentNeed);
+                // Consider skill efficiency when deciding whether to gather or trade
+                const harvestSkill = entity.personality.getSkill(`${urgentNeed}_harvesting`);
+                if (harvestSkill < 0.8 && this.canTradeForResource(urgentNeed)) {
+                    Actions.pursueTrade(entity);
+                } else {
+                    Actions.gatherResource(entity, urgentNeed);
+                }
             }
             return;
         }
@@ -38,7 +44,12 @@ export class DecisionMaker {
         // 2.5 Process resources if needed for goals
         const resourceToProcess = this.getNeededProcessedResource();
         if (resourceToProcess) {
-            this.findAndProcessResource(resourceToProcess);
+            const processSkill = entity.personality.getSkill(`${resourceToProcess}_processing`);
+            if (processSkill < 0.8 && this.canTradeForProcessedResource(resourceToProcess)) {
+                Actions.pursueTrade(entity);
+            } else {
+                this.findAndProcessResource(resourceToProcess);
+            }
             return;
         }
 
@@ -167,19 +178,62 @@ export class DecisionMaker {
         const actions = [];
         const { personality, resources } = entity;
 
-        // Basic needs gathering
-        if (resources.food < 5) actions.push({ name: 'gather_food', execute: () => Actions.gatherResource(entity, 'food') });
-        if (resources.wood < 5) actions.push({ name: 'gather_wood', execute: () => Actions.gatherResource(entity, 'wood') });
-        if (resources.stone < 5) actions.push({ name: 'gather_stone', execute: () => Actions.gatherResource(entity, 'stone') });
+        // Skill-influenced resource gathering - prefer gathering resources we're good at
+        const bestSkills = personality.getBestSkills(3);
+        const skillPreferences = {};
+        bestSkills.forEach(([skillName, level]) => {
+            if (skillName.includes('_harvesting')) {
+                const resourceType = skillName.replace('_harvesting', '');
+                skillPreferences[resourceType] = level;
+            }
+        });
+
+        // Basic needs gathering with skill preferences
+        if (resources.food < 5) {
+            const skillBonus = skillPreferences['food'] || 1.0;
+            actions.push({ 
+                name: 'gather_food', 
+                execute: () => Actions.gatherResource(entity, 'food'),
+                skillLevel: skillBonus
+            });
+        }
+        if (resources.wood < 5) {
+            const skillBonus = skillPreferences['wood'] || 1.0;
+            actions.push({ 
+                name: 'gather_wood', 
+                execute: () => Actions.gatherResource(entity, 'wood'),
+                skillLevel: skillBonus
+            });
+        }
+        if (resources.stone < 5) {
+            const skillBonus = skillPreferences['stone'] || 1.0;
+            actions.push({ 
+                name: 'gather_stone', 
+                execute: () => Actions.gatherResource(entity, 'stone'),
+                skillLevel: skillBonus
+            });
+        }
+
+        // Add opportunistic gathering for resources we're exceptionally good at
+        bestSkills.forEach(([skillName, level]) => {
+            if (level > 1.5 && skillName.includes('_harvesting')) {
+                const resourceType = skillName.replace('_harvesting', '');
+                actions.push({
+                    name: `specialize_${resourceType}`,
+                    execute: () => Actions.gatherResource(entity, resourceType),
+                    skillLevel: level
+                });
+            }
+        });
 
         // Personality-driven actions
-        actions.push({ name: 'wander', execute: () => Actions.wander(entity) });
-        if (personality.traits.curiosity > 0.5) actions.push({ name: 'explore', execute: () => Actions.explore(entity) });
-        if (personality.traits.sociability > 0.5) actions.push({ name: 'socialize', execute: () => Actions.seekSocialInteraction(entity) });
+        actions.push({ name: 'wander', execute: () => Actions.wander(entity), skillLevel: 1.0 });
+        if (personality.traits.curiosity > 0.5) actions.push({ name: 'explore', execute: () => Actions.explore(entity), skillLevel: 1.0 });
+        if (personality.traits.sociability > 0.5) actions.push({ name: 'socialize', execute: () => Actions.seekSocialInteraction(entity), skillLevel: 1.0 });
         
         // Opportunistic actions
         if (this.canTradeProfitably()) {
-            actions.push({ name: 'trade', execute: () => Actions.pursueTrade(entity) });
+            actions.push({ name: 'trade', execute: () => Actions.pursueTrade(entity), skillLevel: 1.0 });
         }
         
         return actions;
@@ -195,10 +249,12 @@ export class DecisionMaker {
             switch (action.name) {
                 case 'gather_food':
                     weight *= (5 - resources.food) * (personality.traits.productivity + 0.5);
+                    weight *= action.skillLevel; // Boost weight based on skill
                     break;
                 case 'gather_wood':
                 case 'gather_stone':
                     weight *= (5 - resources[action.name.split('_')[1]]) * (personality.traits.productivity + 0.2);
+                    weight *= action.skillLevel; // Boost weight based on skill
                     break;
                 case 'explore':
                     weight *= personality.traits.curiosity * 2;
@@ -214,6 +270,12 @@ export class DecisionMaker {
                 case 'wander':
                     weight *= 0.5; // Lower priority
                     break;
+                default:
+                    // Handle specialization actions (e.g., specialize_wood)
+                    if (action.name.startsWith('specialize_')) {
+                        weight *= action.skillLevel * 2; // Strong preference for specialization
+                        weight *= personality.traits.productivity + 0.5;
+                    }
             }
             
             return { ...action, weight: Math.max(0.1, weight) };
@@ -222,8 +284,60 @@ export class DecisionMaker {
 
     canTradeProfitably() {
         const entity = this.entity;
-        // Simplified: can trade if we have a surplus of something another entity might need
-        const surpluses = Object.keys(entity.resources).filter(r => entity.resources[r] > 8);
-        return surpluses.length > 0 && entity.getNeeds().length > 0;
+        // Enhanced trade logic - can trade if we have a surplus of something we're good at producing
+        const resources = entity.getResources();
+        const bestSkills = entity.personality.getBestSkills(2);
+        
+        // Check if we have surplus in areas we're skilled at
+        const skillfulSurpluses = bestSkills.filter(([skillName, level]) => {
+            if (skillName.includes('_harvesting')) {
+                const resourceType = skillName.replace('_harvesting', '');
+                return level > 1.2 && resources[resourceType] > 8;
+            }
+            return false;
+        });
+        
+        return skillfulSurpluses.length > 0 && entity.getNeeds().length > 0;
+    }
+
+    canTradeForResource(resourceType) {
+        // Check if entity has something valuable to trade and low skill in this resource
+        const entity = this.entity;
+        const resources = entity.getResources();
+        const harvestSkill = entity.personality.getSkill(`${resourceType}_harvesting`);
+        
+        // Look for surplus in resources we're good at
+        const bestSkills = entity.personality.getBestSkills(2);
+        const hasTradableSkills = bestSkills.some(([skillName, level]) => {
+            if (skillName.includes('_harvesting')) {
+                const resourceName = skillName.replace('_harvesting', '');
+                return level > 1.2 && resources[resourceName] > 5;
+            }
+            return false;
+        });
+        
+        return harvestSkill < 1.0 && hasTradableSkills;
+    }
+
+    canTradeForProcessedResource(rawResourceType) {
+        const entity = this.entity;
+        const processedType = entity.world.getProcessedResourceFor(rawResourceType);
+        if (!processedType) return false;
+        
+        const processSkill = entity.personality.getSkill(`${rawResourceType}_processing`);
+        const resources = entity.getResources();
+        
+        // Similar logic to resource trading
+        const bestSkills = entity.personality.getBestSkills(2);
+        const hasTradableSkills = bestSkills.some(([skillName, level]) => {
+            if (skillName.includes('_processing')) {
+                const resourceName = skillName.replace('_processing', '');
+                const processedResourceName = entity.world.getProcessedResourceFor(resourceName);
+                return level > 1.2 && resources[processedResourceName] > 3;
+            }
+            return false;
+        });
+        
+        return processSkill < 1.0 && hasTradableSkills;
     }
 }

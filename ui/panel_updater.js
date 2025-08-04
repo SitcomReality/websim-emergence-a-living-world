@@ -97,34 +97,6 @@ function displayConstructionInfo(building, owner) {
     `;
 }
 
-function updateSelectedBuildingPanel(building, world) {
-    if (!building) return;
-
-    const panel = document.getElementById('selectionPanel');
-    const nameEl = document.getElementById('selectionName');
-    
-    const owner = world.getEntities().find(e => e.id === building.ownerId);
-
-    panel.style.display = 'block';
-
-    let buildingTitle = building.type.replace(/_/g, ' ');
-    buildingTitle = buildingTitle.charAt(0).toUpperCase() + buildingTitle.slice(1);
-
-    if (owner) {
-        nameEl.textContent = `${buildingTitle} of ${owner.getName()}`;
-    } else {
-         nameEl.textContent = `Abandoned ${buildingTitle}`;
-    }
-
-    if (building.type === 'home') {
-        displayHomeInfo(building, owner);
-    } else if (building.type === 'storage') {
-        displayStorageInfo(building, owner);
-    } else if (building.type === 'home_construction_site') {
-        displayConstructionInfo(building, owner);
-    }
-}
-
 function updateSelectedEntityPanel(entity) {
     if (!entity) return;
 
@@ -139,6 +111,7 @@ function updateSelectedEntityPanel(entity) {
     nameEl.textContent = info.name;
     infoEl.innerHTML = `
         ${info.personality}<br>
+        <span style="font-size: 11px; color: rgba(255,255,255,0.6)">Best skills: ${info.skills}</span><br>
         <span style="font-size: 12px; color: rgba(255,255,255,0.7)">Task: ${info.task}</span>
     `;
 
@@ -170,6 +143,34 @@ function updateSelectedEntityPanel(entity) {
             </div>
         </div>
     `;
+}
+
+function updateSelectedBuildingPanel(building, world) {
+    if (!building) return;
+
+    const panel = document.getElementById('selectionPanel');
+    const nameEl = document.getElementById('selectionName');
+    
+    const owner = world.getEntities().find(e => e.id === building.ownerId);
+
+    panel.style.display = 'block';
+
+    let buildingTitle = building.type.replace(/_/g, ' ');
+    buildingTitle = buildingTitle.charAt(0).toUpperCase() + buildingTitle.slice(1);
+
+    if (owner) {
+        nameEl.textContent = `${buildingTitle} of ${owner.getName()}`;
+    } else {
+         nameEl.textContent = `Abandoned ${buildingTitle}`;
+    }
+
+    if (building.type === 'home') {
+        displayHomeInfo(building, owner);
+    } else if (building.type === 'storage') {
+        displayStorageInfo(building, owner);
+    } else if (building.type === 'home_construction_site') {
+        displayConstructionInfo(building, owner);
+    }
 }
 
 export function updateSelectionPanel(world, selectedEntity, selectedBuilding) {

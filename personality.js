@@ -9,6 +9,21 @@ export class Personality {
             risktaking: Math.random()
         };
         
+        // Generate skills - each skill ranges from 0.5 (poor) to 2.0 (excellent)
+        this.skills = {
+            wood_harvesting: 0.5 + Math.random() * 1.5,
+            wood_processing: 0.5 + Math.random() * 1.5,
+            stone_harvesting: 0.5 + Math.random() * 1.5,
+            stone_processing: 0.5 + Math.random() * 1.5,
+            food_harvesting: 0.5 + Math.random() * 1.5,
+            food_processing: 0.5 + Math.random() * 1.5
+        };
+        
+        // Round skills to 2 decimal places for cleaner display
+        for (const skill in this.skills) {
+            this.skills[skill] = Math.round(this.skills[skill] * 100) / 100;
+        }
+        
         // Ensure some balance - highly aggressive entities are less cooperative
         if (this.traits.aggression > 0.7) {
             this.traits.cooperation *= 0.5;
@@ -20,6 +35,17 @@ export class Personality {
         }
     }
 
+    getSkill(skillName) {
+        return this.skills[skillName] || 1.0;
+    }
+
+    getBestSkills(count = 2) {
+        // Return the top skills for this entity
+        const skillEntries = Object.entries(this.skills);
+        skillEntries.sort((a, b) => b[1] - a[1]);
+        return skillEntries.slice(0, count);
+    }
+
     getDescription() {
         const descriptions = [];
         
@@ -29,6 +55,13 @@ export class Personality {
         if (this.traits.aggression > 0.7) descriptions.push("aggressive");
         if (this.traits.cooperation > 0.7) descriptions.push("cooperative");
         if (this.traits.risktaking > 0.7) descriptions.push("adventurous");
+        
+        // Add skill specializations
+        const bestSkills = this.getBestSkills(1);
+        if (bestSkills.length > 0 && bestSkills[0][1] > 1.5) {
+            const skillName = bestSkills[0][0].replace('_', ' ');
+            descriptions.push(`skilled at ${skillName}`);
+        }
         
         if (descriptions.length === 0) {
             descriptions.push("balanced");
@@ -64,4 +97,3 @@ export class Personality {
         return options[0];
     }
 }
-

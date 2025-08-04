@@ -57,19 +57,26 @@ export function processResourcesInBuilding(entity, deltaTime) {
         return;
     }
     
-    // Simple time-based processing. 1 unit takes ~3 seconds.
-    // This is where skill modifiers would go in the future.
-    const processingTimePerUnit = 3000;
+    // Get skill modifier for processing
+    const skillName = `${job.rawType}_processing`;
+    const skillLevel = entity.personality.getSkill(skillName);
+    const speedMultiplier = skillLevel; // Higher skill = faster processing
+    const yieldMultiplier = Math.max(0.8, Math.min(1.5, skillLevel)); // 0.8x to 1.5x yield based on skill
+    
+    // Base processing time: 3 seconds per unit, modified by skill
+    const processingTimePerUnit = 3000 / speedMultiplier;
     const processingRate = deltaTime / processingTimePerUnit;
     
     const amountToProcess = Math.min(rawAmount, processingRate);
 
     building.inventory[job.rawType] -= amountToProcess;
-    building.inventory[job.processedType] = (building.inventory[job.processedType] || 0) + amountToProcess;
+    const processedAmount = amountToProcess * yieldMultiplier;
+    building.inventory[job.processedType] = (building.inventory[job.processedType] || 0) + processedAmount;
 
     // Check if we're done with this batch
     if (building.inventory[job.rawType] < 1) {
-        entity.world.eventSystem.addEvent(`${entity.name} finished processing ${job.rawType}.`);
+        const totalProcessed = Math.round((building.inventory[job.processedType] || 0) * 10) / 10;
+        entity.world.eventSystem.addEvent(`${entity.name} finished processing ${job.rawType} (skill: ${skillLevel.toFixed(1)}x).`);
         entity.task.idle();
     }
     // Otherwise, entity remains at the building to continue processing on next update.
@@ -116,21 +123,37 @@ export function gatherFromTargetNode(entity, deltaTime) {
         entity.task.set(taskName, entity.task.targetNode);
     }
     
-    // Time-based harvesting.
-    // This is where skill modifiers would go in the future.
-    const harvestingSpeed = 1.0; // Base speed
-    const requiredProgress = 2000; // 2 seconds per unit at base speed
+    // Get skill modifier for harvesting
+    const skillName = `${resourceType}_harvesting`;
+    const skillLevel = entity.personality.getSkill(skillName);
+    const speedMultiplier = skillLevel; // Higher skill = faster harvesting
+    const yieldMultiplier = Math.max(0.7, Math.min(1.8, skillLevel)); // 0.7x to 1.8x yield based on skill
+    
+    // Base harvesting time: 2 seconds per unit, modified by skill
+    const requiredProgress = 2000 / speedMultiplier;
 
-    entity.task.harvestingProgress += deltaTime * harvestingSpeed;
+    entity.task.harvestingProgress += deltaTime;
 
     if (entity.task.harvestingProgress >= requiredProgress) {
         entity.task.harvestingProgress = 0; // Reset for next unit
 
-        const gathered = entity.world.resourceManager.gatherFrom(entity.task.targetNode);
-        if (gathered) {
-            entity.inventory.add(gathered);
+        const baseGathered = entity.world.resourceManager.gatherFrom(entity.task.targetNode);
+        if (baseGathered) {
+            // Apply yield multiplier
+            const bonusAmount = baseGathered.amount * (yieldMultiplier - 1.0);
+            const totalAmount = baseGathered.amount + bonusAmount;
+            
+            entity.inventory.add({
+                type: baseGathered.type,
+                amount: Math.round(totalAmount * 10) / 10
+            });
+            
             entity.vitals.increaseEnergy(2); // Small energy boost for success
-            // Don't log every single gather event to reduce spam.
+            
+            // Log exceptional harvests
+            if (yieldMultiplier > 1.3) {
+                entity.world.eventSystem.addEvent(`${entity.name} made an excellent harvest! (${totalAmount.toFixed(1)} ${baseGathered.type})`);
+            }
         }
 
         // Decide if we should continue gathering or go home after getting one unit

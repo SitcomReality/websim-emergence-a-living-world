@@ -286,9 +286,15 @@ export class Entity {
     getName() { return this.name; }
 
     getInfo() {
+        const bestSkills = this.personality.getBestSkills(2);
+        const skillText = bestSkills.map(([name, level]) => 
+            `${name.replace('_', ' ')}: ${level.toFixed(1)}x`
+        ).join(', ');
+        
         return {
             name: this.name,
             personality: this.personality.getDescription(),
+            skills: skillText,
             resources: this.getResources(),
             inventory: this.inventory.items,
             task: this.currentTask,
