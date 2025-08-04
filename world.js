@@ -58,6 +58,17 @@ export class World {
         }
     }
 
+    spawnNewEntity() {
+        const entity = new Entity(
+            Math.random() * (this.width - 40) + 20,
+            Math.random() * (this.height - 40) + 20,
+            this,
+            false
+        );
+        this.entities.push(entity);
+        this.eventSystem.addEvent(`A newcomer, ${entity.getName()}, has arrived.`);
+    }
+
     createGarden(x, y, type, ownerId) {
         const garden = {
             id: Math.random().toString(36).substring(2, 9),
