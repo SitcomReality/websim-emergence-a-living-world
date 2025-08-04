@@ -22,11 +22,17 @@ export function getNeeds(entity) {
     return [...new Set(needs)];
 }
 
-// Determine the most pressing need
 export function getUrgentNeed(entity) {
     const resources = entity.getResources(); // Use the getter method
     const { home } = entity;
-    if (resources.food < 1 && (home?.inventory?.cooked_food || 0) < 1) return 'food'; // Raw food if desperate
+    // Urgent if low energy
+    if (entity.vitals.energy < 30) {
+        return 'food';
+    }
+    // Fallback if virtually no raw or cooked food
+    if (resources.food < 1 && (home?.inventory?.cooked_food || 0) < 1) {
+        return 'food';
+    }
     return null;
 }
 

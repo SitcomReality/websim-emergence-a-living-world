@@ -343,6 +343,25 @@ export function meditate(entity) {
     entity.task.set('meditating');
 }
 
+// --- Eating Actions ---
+export function eatCookedFood(entity) {
+    // Consume cooked food for a significant energy boost
+    if (entity.resourceManager.useResourceFromHome('cooked_food', 1)) {
+        entity.vitals.increaseEnergy(20);
+        entity.world.eventSystem.addEvent(`${entity.getName()} enjoyed a hearty cooked meal.`);
+    }
+    entity.task.idle();
+}
+
+export function eatRawFood(entity) {
+    // Consume raw food for a small energy boost
+    if (entity.resourceManager.useResourceFromHome('food', 1)) {
+        entity.vitals.increaseEnergy(5);
+        entity.world.eventSystem.addEvent(`${entity.getName()} ate some raw food, but it wasn't very satisfying.`);
+    }
+    entity.task.idle();
+}
+
 export function storytelling(entity) {
     const nearbyEntities = entity.world.getEntities().filter(other => 
         other.id !== entity.id && entity.world.getDistance(entity, other) < 120
