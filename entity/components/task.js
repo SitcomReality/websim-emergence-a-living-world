@@ -4,6 +4,7 @@ export class Task {
         this.current = 'idle';
         this.targetNode = null;
         this.targetNodeId = null; // for saving
+        this.processingJob = null; // For processing tasks { rawType, processedType, amount }
         this.actionTimer = Math.random() * 2000;
         this.actionInterval = 3000 + Math.random() * 4000;
     }
@@ -25,8 +26,14 @@ export class Task {
     set(taskName, targetNode = null) {
         this.current = taskName;
         this.targetNode = targetNode;
+        this.processingJob = null;
     }
     
+    setProcessing(job, building) {
+        this.set(`processing ${job.rawType}`, building);
+        this.processingJob = job;
+    }
+
     idle() {
         this.set('idle');
         this.clearTarget();
@@ -34,6 +41,7 @@ export class Task {
     
     clearTarget() {
         this.targetNode = null;
+        this.processingJob = null;
     }
 
     serialize() {
@@ -42,6 +50,7 @@ export class Task {
             targetNodeId: this.targetNode ? this.targetNode.id : null,
             actionTimer: this.actionTimer,
             actionInterval: this.actionInterval,
+            processingJob: this.processingJob,
         };
     }
     
@@ -51,6 +60,7 @@ export class Task {
         this.actionTimer = data.actionTimer;
         this.actionInterval = data.actionInterval;
         this.targetNodeId = data.targetNodeId; // Store for linking
+        this.processingJob = data.processingJob;
     }
     
     linkSavedData(world) {

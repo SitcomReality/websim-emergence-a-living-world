@@ -206,6 +206,18 @@ export class Renderer {
         this.ctx.lineTo(x + building.width / 2, y - 10);
         this.ctx.closePath();
         this.ctx.fill();
+
+        // Check if an entity is processing here
+        const owner = this.world.entities.find(e => e.id === building.ownerId);
+        if (owner && owner.currentTask.startsWith('processing') && owner.targetNode?.id === building.id) {
+            this.ctx.font = '14px sans-serif';
+            this.ctx.fillStyle = 'white';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+             // Draw a simple icon like a hammer
+            this.ctx.fillText('🔨', 0, 0);
+        }
+
         this.ctx.restore();
     }
 

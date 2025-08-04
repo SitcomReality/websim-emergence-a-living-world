@@ -11,6 +11,19 @@ export function wander(entity) {
     entity.targetY = Math.max(20, Math.min(entity.world.height - 20, entity.targetY));
 }
 
+export function processResource(entity, rawResourceType, building) {
+    const processedType = entity.world.getProcessedResourceFor(rawResourceType);
+    if (!processedType) return;
+
+    entity.targetX = building.x;
+    entity.targetY = building.y;
+    entity.task.setProcessing({
+        rawType: rawResourceType,
+        processedType: processedType,
+        amount: 1
+    }, building);
+}
+
 export function findHomeLocation(entity) {
     entity.task.set('finding a home location');
     // Simplified logic: find a good spot near resources, not too close to others.

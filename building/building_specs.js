@@ -1,16 +1,16 @@
 export const BUILDING_SPECS = {
     home: {
         construction: {
-            wood: 10,
-            stone: 5,
+            planks: 10,
+            bricks: 5,
         },
         constructionTotal: 100, // total "work" units to build
     },
     storage: {
         construction: {
-            wood: 1
+            wood: 5
         },
-        constructionTotal: 10,
+        constructionTotal: 20,
     }
 };
 

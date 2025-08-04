@@ -177,10 +177,14 @@ export class UI {
 
         panel.style.display = 'block';
 
+        let buildingTitle = building.type.replace(/_/g, ' ');
+        // Capitalize first letter
+        buildingTitle = buildingTitle.charAt(0).toUpperCase() + buildingTitle.slice(1);
+
         if (owner) {
-            nameEl.textContent = `${building.type.replace('_', ' ')} of ${owner.getName()}`;
+            nameEl.textContent = `${buildingTitle} of ${owner.getName()}`;
         } else {
-             nameEl.textContent = `Abandoned ${building.type.replace('_', ' ')}`;
+             nameEl.textContent = `Abandoned ${buildingTitle}`;
         }
 
         if (building.type === 'home') {
@@ -198,15 +202,19 @@ export class UI {
         infoEl.innerHTML = `<div style="font-size: 14px;">A modest dwelling. Level ${building.level}</div>`;
         
         if(owner) {
-            const resources = building.inventory;
+            const res = building.inventory;
             statsEl.innerHTML = `
                  <div style="margin-top: 10px; font-size: 11px;">
                     <div>Stored Resources:</div>
                     <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                        <span>Food: ${resources.food.toFixed(1)}</span>
-                        <span>Water: ${resources.water.toFixed(1)}</span>
-                        <span>Wood: ${resources.wood.toFixed(1)}</span>
-                        <span>Stone: ${resources.stone.toFixed(1)}</span>
+                        <span>Food: ${res.food.toFixed(1)}</span>
+                        <span>Water: ${res.water.toFixed(1)}</span>
+                        <span>Wood: ${res.wood.toFixed(1)}</span>
+                        <span>Stone: ${res.stone.toFixed(1)}</span>
+                        <span>Cooked Food: ${(res.cooked_food || 0).toFixed(1)}</span>
+                        <span>F. Water: ${(res.filtered_water || 0).toFixed(1)}</span>
+                        <span>Planks: ${(res.planks || 0).toFixed(1)}</span>
+                        <span>Bricks: ${(res.bricks || 0).toFixed(1)}</span>
                     </div>
                 </div>
             `;
@@ -221,15 +229,19 @@ export class UI {
         infoEl.innerHTML = `<div style="font-size: 14px;">A simple storage shed.</div>`;
         
         if(owner) {
-            const resources = building.inventory;
+            const res = building.inventory;
             statsEl.innerHTML = `
                  <div style="margin-top: 10px; font-size: 11px;">
                     <div>Stored Resources:</div>
                     <div style="margin-left: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                        <span>Food: ${resources.food.toFixed(1)}</span>
-                        <span>Water: ${resources.water.toFixed(1)}</span>
-                        <span>Wood: ${resources.wood.toFixed(1)}</span>
-                        <span>Stone: ${resources.stone.toFixed(1)}</span>
+                        <span>Food: ${res.food.toFixed(1)}</span>
+                        <span>Water: ${res.water.toFixed(1)}</span>
+                        <span>Wood: ${res.wood.toFixed(1)}</span>
+                        <span>Stone: ${res.stone.toFixed(1)}</span>
+                        <span>Cooked Food: ${(res.cooked_food || 0).toFixed(1)}</span>
+                        <span>F. Water: ${(res.filtered_water || 0).toFixed(1)}</span>
+                        <span>Planks: ${(res.planks || 0).toFixed(1)}</span>
+                        <span>Bricks: ${(res.bricks || 0).toFixed(1)}</span>
                     </div>
                 </div>
             `;

@@ -24,7 +24,18 @@ export class DecisionMaker {
         // 2. Address urgent needs
         const urgentNeed = this.getUrgentNeed();
         if (urgentNeed) {
-            Actions.gatherResource(entity, urgentNeed);
+            if (urgentNeed === 'cooked_food') {
+                this.findAndProcessResource('food');
+            } else {
+                Actions.gatherResource(entity, urgentNeed);
+            }
+            return;
+        }
+
+        // 2.5 Process resources if needed for goals
+        const resourceToProcess = this.getNeededProcessedResource();
+        if (resourceToProcess) {
+            this.findAndProcessResource(resourceToProcess);
             return;
         }
 
@@ -71,9 +82,20 @@ export class DecisionMaker {
                 entity.world.buildingManager.startHomeConstruction(entity, entity.homeLocation.x, entity.homeLocation.y);
                 // The next decision cycle will pick up construction work
             } else {
-                // Gather resources for the home
+                // Gather/process resources for the home
                 const needed = entity.storageShed.getNeededResourcesFor('home');
-                Actions.gatherResource(entity, needed[0]); // Gather the first thing we need
+                const neededRaw = entity.world.getRawResourceFor(needed[0]);
+
+                // Do we have the raw materials to process?
+                if (neededRaw && (entity.storageShed.inventory[neededRaw] || 0) > 0) {
+                     Actions.processResource(entity, neededRaw, entity.storageShed);
+                } else if (neededRaw) {
+                    // Gather raw materials
+                    Actions.gatherResource(entity, neededRaw);
+                } else {
+                    // Should not happen, but fallback if processed resource has no raw equivalent
+                    Actions.wander(entity);
+                }
             }
             return;
         }
@@ -94,10 +116,41 @@ export class DecisionMaker {
 
     // Determine the most pressing need
     getUrgentNeed() {
-        const { resources } = this.entity;
-        if (resources.food < 2) return 'food';
+        const { resources, home } = this.entity;
+        if (resources.food < 1 && (home?.inventory?.cooked_food || 0) < 1) return 'food'; // Raw food if desperate
         if (resources.water < 3) return 'water'; // Water is slightly more urgent
         return null;
+    }
+
+    getNeededProcessedResource() {
+        const entity = this.entity;
+        if (entity.home) return null; // Logic is currently for pre-home state
+
+        if (entity.storageShed) {
+             const needed = entity.storageShed.getNeededResourcesFor('home');
+             if (needed.length > 0) {
+                 const rawType = entity.world.getRawResourceFor(needed[0]);
+                 if (rawType && (entity.storageShed.inventory[rawType] || 0) >= 1) {
+                     return rawType;
+                 }
+             }
+        }
+        return null;
+    }
+
+    findAndProcessResource(rawType) {
+        const entity = this.entity;
+        const processLocation = entity.home || entity.storageShed;
+        if (!processLocation) {
+            Actions.wander(entity); // Cannot process without a location
+            return;
+        }
+
+        if ((processLocation.inventory[rawType] || 0) >= 1) {
+            Actions.processResource(entity, rawType, processLocation);
+        } else {
+            Actions.gatherResource(entity, rawType);
+        }
     }
 
     // Get a list of potential actions based on state and personality

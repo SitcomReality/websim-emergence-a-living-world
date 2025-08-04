@@ -3,6 +3,15 @@ import { ResourceManager } from './resource.js';
 import { EventSystem } from './events.js';
 import { BuildingManager } from './building/building_manager.js';
 
+const RAW_TO_PROCESSED = {
+    wood: 'planks',
+    stone: 'bricks',
+    food: 'cooked_food',
+    water: 'filtered_water'
+};
+
+const PROCESSED_TO_RAW = Object.fromEntries(Object.entries(RAW_TO_PROCESSED).map(([k, v]) => [v, k]));
+
 export class World {
     constructor() {
         this.entities = [];
@@ -279,6 +288,14 @@ export class World {
         return this.visualEffects;
     }
     
+    getProcessedResourceFor(rawType) {
+        return RAW_TO_PROCESSED[rawType];
+    }
+
+    getRawResourceFor(processedType) {
+        return PROCESSED_TO_RAW[processedType];
+    }
+
     serialize() {
         return {
             entities: this.entities.map(e => e.serialize()),

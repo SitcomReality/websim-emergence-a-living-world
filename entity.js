@@ -35,6 +35,8 @@ export class Entity {
         if (hasHome) {
             this.home = this.world.buildingManager.createHomeForEntity(this, x, y);
             this.homeLocation = { x: this.home.x, y: this.home.y };
+            // Give starting processed food
+            this.home.inventory.cooked_food = 5;
         }
 
         // Home/personal resource storage (remains here for now as it's tightly coupled with building logic)
@@ -111,6 +113,11 @@ export class Entity {
             ActionHandler.workOnConstruction(this);
         }
         
+        // If at home/storage to process resources
+        if (this.currentTask.startsWith('processing') && this.targetNode && this.movement.isAtTarget()) {
+            ActionHandler.processResourcesInBuilding(this);
+        }
+
         // If at deposit point to store traded goods
         if (this.currentTask === 'storing traded goods' && this.targetNode && this.movement.isAtTarget()) {
             this.depositTradeInventory();

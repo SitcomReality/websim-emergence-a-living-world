@@ -4,7 +4,7 @@ import { Building } from '../building/building.js';
 export function finishBuildingStorageShed(entity) {
     if (!entity.homeLocation || entity.storageShed) return;
 
-    const woodNeeded = 1;
+    const woodNeeded = 5; // Updated to match building_specs
     // Check carried and home-stored resources
     let woodAvailable = entity.getCarriedResourceAmount('wood') + entity.resources.wood;
 
@@ -39,6 +39,40 @@ export function workOnConstruction(entity) {
         // The entity will stay at the new home location, can start a new action next cycle
     }
     // If not completed, the entity will stay here to work more on the next action cycle.
+}
+
+export function processResourcesInBuilding(entity) {
+    const job = entity.task.processingJob;
+    const building = entity.task.targetNode;
+
+    if (!job || !building) {
+        entity.task.idle();
+        return;
+    }
+
+    const rawAmount = building.inventory[job.rawType] || 0;
+    if (rawAmount < job.amount) {
+        // Not enough raw materials, stop processing.
+        entity.task.idle();
+        return;
+    }
+    
+    // Simple time-based processing. 1 unit takes ~3 seconds.
+    // This is where skill modifiers would go in the future.
+    const processingTimePerUnit = 3000;
+    const processingRate = entity.world.lastDeltaTime / processingTimePerUnit;
+    
+    const amountToProcess = Math.min(rawAmount, processingRate);
+
+    building.inventory[job.rawType] -= amountToProcess;
+    building.inventory[job.processedType] = (building.inventory[job.processedType] || 0) + amountToProcess;
+
+    // Check if we're done with this batch
+    if (building.inventory[job.rawType] < 1) {
+        entity.world.eventSystem.addEvent(`${entity.name} finished processing ${job.rawType}.`);
+        entity.task.idle();
+    }
+    // Otherwise, entity remains at the building to continue processing on next update.
 }
 
 export function finishDepositing(entity) {
