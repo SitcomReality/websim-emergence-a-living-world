@@ -2,6 +2,7 @@ export class Task {
     constructor(entity) {
         this.entity = entity;
         this.current = 'idle';
+        this.goal = 'Surviving';
         this.targetNode = null;
         this.targetNodeId = null; // for saving
         this.processingJob = null; // For processing tasks { rawType, processedType, amount }
@@ -31,6 +32,14 @@ export class Task {
         this.harvestingProgress = 0; // Reset progress on new task
     }
     
+    setGoal(goalName) {
+        this.goal = goalName;
+    }
+    
+    clearGoal() {
+        this.setGoal('Improving Livelihood');
+    }
+
     setProcessing(job, building) {
         this.set(`processing ${job.rawType}`, building);
         this.processingJob = job;
@@ -50,6 +59,7 @@ export class Task {
     serialize() {
         return {
             current: this.current,
+            goal: this.goal,
             targetNodeId: this.targetNode ? this.targetNode.id : null,
             actionTimer: this.actionTimer,
             actionInterval: this.actionInterval,
@@ -61,6 +71,7 @@ export class Task {
     deserialize(data) {
         if (!data) return;
         this.current = data.current;
+        this.goal = data.goal || 'Surviving';
         this.actionTimer = data.actionTimer;
         this.actionInterval = data.actionInterval;
         this.targetNodeId = data.targetNodeId; // Store for linking

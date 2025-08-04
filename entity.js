@@ -298,6 +298,7 @@ export class Entity {
             resources: this.getResources(),
             inventory: this.inventory.items,
             task: this.currentTask,
+            goal: this.task.goal,
             energy: Math.round(this.vitals.energy),
             happiness: Math.round(this.vitals.happiness),
             age: Math.round(this.vitals.age),

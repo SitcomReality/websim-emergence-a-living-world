@@ -1,8 +1,11 @@
-// New file
-
 import * as Actions from '../actions.js';
 
 export function handleHomelessBehavior(entity) {
+    // Set a persistent goal for this entire process
+    if (entity.task.goal !== 'Establishing a Home') {
+        entity.task.setGoal('Establishing a Home');
+    }
+
     // Step 1: Find a home location if we haven't
     if (!entity.homeLocation) {
         Actions.findHomeLocation(entity);

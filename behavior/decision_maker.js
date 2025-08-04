@@ -22,15 +22,22 @@ export class DecisionMaker {
             return;
         }
 
-        // 1. Handle critical state: Full inventory
+        // 1. Handle critical state: Full inventory or has traded goods
         if (entity.isInventoryFull()) {
+            entity.task.setGoal('Storing Resources');
             Actions.depositResources(entity);
+            return;
+        }
+        if (entity.hasTradedGoods()) {
+            entity.task.setGoal('Storing Trade Goods');
+            Actions.storeTradedGoods(entity);
             return;
         }
 
         // 2. Address urgent needs
         const urgentNeed = NeedsAssessor.getUrgentNeed(entity);
         if (urgentNeed) {
+            entity.task.setGoal('Fulfilling Basic Need');
             if (urgentNeed === 'food') {
                 this.findAndProcessResource('food');
             } else {
@@ -48,6 +55,7 @@ export class DecisionMaker {
         // 2.5 Process resources if needed for goals
         const resourceToProcess = NeedsAssessor.getNeededProcessedResource(entity);
         if (resourceToProcess) {
+            entity.task.setGoal('Improving Resources');
             const processSkill = entity.personality.getSkill(`${resourceToProcess}_processing`);
             const processedType = entity.world.getProcessedResourceFor(resourceToProcess);
 
@@ -70,12 +78,25 @@ export class DecisionMaker {
         for (const action of weightedActions) {
             random -= action.weight;
             if (random <= 0) {
+                // Set goal based on chosen action
+                if (action.name.startsWith('gather') || action.name.startsWith('specialize')) {
+                    entity.task.setGoal('Stockpiling Resources');
+                } else if (action.name === 'explore') {
+                    entity.task.setGoal('Exploring the World');
+                } else if (action.name === 'socialize') {
+                    entity.task.setGoal('Building Relationships');
+                } else if (action.name === 'trade') {
+                    entity.task.setGoal('Seeking Profitable Trade');
+                } else {
+                    entity.task.setGoal('Wandering');
+                }
                 action.execute();
                 return;
             }
         }
 
         // 4. Default action if nothing else is chosen
+        entity.task.setGoal('Wandering');
         Actions.wander(entity);
     }
     

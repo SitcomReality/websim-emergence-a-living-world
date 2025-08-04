@@ -36,6 +36,7 @@ export function workOnConstruction(entity) {
         entity.world.eventSystem.addEvent(`${entity.name} finished building their home!`);
         entity.home = completed;
         entity.task.idle();
+        entity.task.clearGoal(); // Goal "Establishing a Home" is complete.
         // The entity will stay at the new home location, can start a new action next cycle
     }
     // If not completed, the entity will stay here to work more on the next action cycle.

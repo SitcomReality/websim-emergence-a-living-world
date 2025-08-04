@@ -110,9 +110,14 @@ function updateSelectedEntityPanel(entity) {
     panel.style.display = 'block';
     nameEl.textContent = info.name;
     infoEl.innerHTML = `
-        ${info.personality}<br>
-        <span style="font-size: 11px; color: rgba(255,255,255,0.6)">Best skills: ${info.skills}</span><br>
-        <span style="font-size: 12px; color: rgba(255,255,255,0.7)">Task: ${info.task}</span>
+        <div class="details">
+            ${info.personality}<br>
+            <span style="font-size: 11px; color: rgba(255,255,255,0.6)">Best skills: ${info.skills}</span>
+        </div>
+        <div class="details" style="margin-top: 8px;">
+            <div><span class="label">Goal:</span> ${info.goal}</div>
+            <div><span class="label">Task:</span> ${info.task}</div>
+        </div>
     `;
 
     const inventoryText = info.inventory.length > 0
