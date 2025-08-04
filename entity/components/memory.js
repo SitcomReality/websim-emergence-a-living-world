@@ -195,7 +195,10 @@ export class Memory {
         for (const categoryMap of Object.values(this.strategies)) {
             if (categoryMap instanceof Map) {
                 for (const data of categoryMap.values()) {
-                    data.successRate *= this.memoryDecay;
+                    // Check if the strategy data is an object with successRate, not just a number
+                    if (typeof data === 'object' && data !== null && 'successRate' in data) {
+                        data.successRate *= this.memoryDecay;
+                    }
                 }
             }
         }
