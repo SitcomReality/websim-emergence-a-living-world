@@ -11,7 +11,10 @@ export class DecisionMaker {
 
         // 0. HIGHEST PRIORITY: Establish a home if homeless
         if (!entity.home) {
-            this.decideActionForHomeless();
+            // Only make new homeless decisions if truly idle
+            if (entity.currentTask === 'idle') {
+                this.decideActionForHomeless();
+            }
             return;
         }
 
@@ -82,19 +85,24 @@ export class DecisionMaker {
                 entity.world.buildingManager.startHomeConstruction(entity, entity.homeLocation.x, entity.homeLocation.y);
                 // The next decision cycle will pick up construction work
             } else {
-                // Gather/process resources for the home
+                // Check if we need to process raw materials into processed ones
                 const needed = entity.storageShed.getNeededResourcesFor('home');
-                const neededRaw = entity.world.getRawResourceFor(needed[0]);
-
-                // Do we have the raw materials to process?
-                if (neededRaw && (entity.storageShed.inventory[neededRaw] || 0) > 0) {
-                     Actions.processResource(entity, neededRaw, entity.storageShed);
-                } else if (neededRaw) {
-                    // Gather raw materials
-                    Actions.gatherResource(entity, neededRaw);
-                } else {
-                    // Should not happen, but fallback if processed resource has no raw equivalent
-                    Actions.wander(entity);
+                if (needed.length > 0) {
+                    const processedType = needed[0];
+                    const rawType = entity.world.getRawResourceFor(processedType);
+                    
+                    if (rawType) {
+                        // Check if we have raw materials to process
+                        if ((entity.storageShed.inventory[rawType] || 0) >= 1) {
+                            Actions.processResource(entity, rawType, entity.storageShed);
+                        } else {
+                            // Need to gather raw materials first
+                            Actions.gatherResource(entity, rawType);
+                        }
+                    } else {
+                        // Fallback - shouldn't happen with current resource types
+                        Actions.wander(entity);
+                    }
                 }
             }
             return;
@@ -129,7 +137,8 @@ export class DecisionMaker {
         if (entity.storageShed) {
              const needed = entity.storageShed.getNeededResourcesFor('home');
              if (needed.length > 0) {
-                 const rawType = entity.world.getRawResourceFor(needed[0]);
+                 const processedType = needed[0];
+                 const rawType = entity.world.getRawResourceFor(processedType);
                  if (rawType && (entity.storageShed.inventory[rawType] || 0) >= 1) {
                      return rawType;
                  }
