@@ -41,7 +41,7 @@ export function workOnConstruction(entity) {
     // If not completed, the entity will stay here to work more on the next action cycle.
 }
 
-export function processResourcesInBuilding(entity) {
+export function processResourcesInBuilding(entity, deltaTime) {
     const job = entity.task.processingJob;
     const building = entity.task.targetNode;
 
@@ -60,7 +60,7 @@ export function processResourcesInBuilding(entity) {
     // Simple time-based processing. 1 unit takes ~3 seconds.
     // This is where skill modifiers would go in the future.
     const processingTimePerUnit = 3000;
-    const processingRate = entity.world.lastDeltaTime / processingTimePerUnit;
+    const processingRate = deltaTime / processingTimePerUnit;
     
     const amountToProcess = Math.min(rawAmount, processingRate);
 

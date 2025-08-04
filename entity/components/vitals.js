@@ -33,4 +33,3 @@ export class Vitals {
         this.age = data.age;
     }
 }
-

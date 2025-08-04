@@ -27,6 +27,10 @@ export class World {
         this.visualEffects = [];
     }
 
+    get lastDeltaTime() {
+        return this._lastDeltaTime || 0;
+    }
+
     initialize() {
         this.reset();
         this.resourceManager.generateResources(this.width, this.height);
@@ -37,6 +41,7 @@ export class World {
         this.entities = [];
         this.cycleCount = 0;
         this.cycleTimer = 0;
+        this._lastDeltaTime = 0;
         this.eventSystem.clear();
         this.resourceManager.reset();
         this.buildingManager.reset();
@@ -60,6 +65,7 @@ export class World {
     }
 
     update(deltaTime) {
+        this._lastDeltaTime = deltaTime;
         this.cycleTimer += deltaTime;
         
         // Update trade cooldowns

@@ -117,7 +117,7 @@ export class Entity {
         
         // If at home/storage to process resources
         if (this.currentTask.startsWith('processing') && this.targetNode && this.movement.isAtTarget()) {
-            ActionHandler.processResourcesInBuilding(this);
+            ActionHandler.processResourcesInBuilding(this, deltaTime);
         }
 
         // If at deposit point to store traded goods
