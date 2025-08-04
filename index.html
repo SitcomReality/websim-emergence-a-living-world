@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Emergence - A Living World</title>
-    <link rel="stylesheet" href="css/ui.css">
-    <link rel="stylesheet" href="css/world-elements.css">
     <style>
         * {
             margin: 0;
@@ -52,8 +50,9 @@
         }
 
         #worldCanvas {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
             cursor: pointer;
         }
 
@@ -89,6 +88,7 @@
         .carried-resource.food { background: #8BC34A; }
         .carried-resource.wood { background: #795548; }
         .carried-resource.stone { background: #607D8B; }
+        .carried-resource.water { background: #03A9F4; }
 
         .entity:hover {
             transform: scale(1.2);
@@ -116,17 +116,6 @@
         .entity:hover .entity-name-plate {
             visibility: visible;
             opacity: 1;
-        }
-
-        .entity-harvest-indicator {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 14px;
-            text-shadow: 0 0 4px rgba(0,0,0,0.5);
-            animation: processing-pulse 1.5s infinite ease-in-out;
-            pointer-events: none;
         }
 
         .entity.farmer { background-image: url('farmer_sprite.png'); }
@@ -207,6 +196,7 @@
         .resource-node.food { background: #8BC34A; }
         .resource-node.wood { background: #795548; }
         .resource-node.stone { background: #607D8B; }
+        .resource-node.water { background: #03A9F4; }
 
         .info-panel {
             background: rgba(255, 255, 255, 0.1);
@@ -227,98 +217,6 @@
             font-size: 14px;
             line-height: 1.4;
             margin-bottom: 8px;
-        }
-
-        .info-panel .details {
-            font-size: 12px;
-            color: rgba(255,255,255,0.8);
-            line-height: 1.5;
-        }
-        .info-panel .details .label {
-            font-weight: 600;
-            color: rgba(255,255,255,0.9);
-        }
-
-        #selectionContent {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .selection-section {
-            background: rgba(0,0,0,0.2);
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .selection-section-title {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: rgba(255,255,255,0.6);
-            margin-bottom: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 4px;
-        }
-        
-        .section-subsection-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: rgba(255,255,255,0.8);
-            margin-top: 8px;
-            margin-bottom: 4px;
-        }
-
-        .personality-desc {
-            font-style: italic;
-            font-size: 13px;
-            color: rgba(255,255,255,0.9);
-        }
-        
-        .skills-list {
-             font-size: 11px; 
-             color: rgba(255,255,255,0.7);
-        }
-
-        .status-grid {
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-        .vitals-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin-top: 10px;
-            font-size: 11px;
-        }
-        
-        .stat-item {
-            background: rgba(0,0,0,0.3);
-            padding: 4px 6px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .stat-item .label {
-            color: rgba(255,255,255,0.7);
-        }
-
-        .inventory-text {
-            font-size: 12px;
-            color: rgba(255,255,255,0.8);
-            font-style: italic;
-        }
-
-        .resource-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2px 8px;
-            font-size: 11px;
-            color: rgba(255,255,255,0.8);
         }
 
         .controls {
@@ -433,10 +331,14 @@
                         <div style="color: rgba(255,255,255,0.7);">Trades</div>
                     </div>
                 </div>
-                <div id="resourceStats" class="stats" style="grid-template-columns: repeat(3, 1fr); gap: 5px;">
+                <div id="resourceStats" class="stats" style="grid-template-columns: repeat(4, 1fr); gap: 5px;">
                     <div class="stat">
                         <div style="font-weight: bold;" id="foodCount">0</div>
                         <div style="color: rgba(255,255,255,0.7);">Food</div>
+                    </div>
+                    <div class="stat">
+                        <div style="font-weight: bold;" id="waterCount">0</div>
+                        <div style="color: rgba(255,255,255,0.7);">Water</div>
                     </div>
                     <div class="stat">
                         <div style="font-weight: bold;" id="woodCount">0</div>
@@ -451,7 +353,8 @@
 
             <div class="info-panel" id="selectionPanel" style="display: none;">
                 <h3 id="selectionName">Selection</h3>
-                <div id="selectionContent"></div>
+                <div id="selectionInfo"></div>
+                <div id="selectionStats"></div>
             </div>
 
             <div class="info-panel">
@@ -467,39 +370,23 @@
             "imports": {
                 "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
                 "nipplejs": "https://esm.sh/nipplejs",
-                "./entity/components/inventory.js": "/entity/components/inventory.js",
-                "./entity/components/relationships.js": "/entity/components/relationships.js",
-                "./entity/components/vitals.js": "/entity/components/vitals.js",
-                "./entity/components/task.js": "/entity/components/task.js",
-                "./entity/components/movement.js": "/entity/components/movement.js",
-                "./entity/components/appearance.js": "/entity/components/appearance.js",
-                "./entity/action_handlers.js": "/entity/action_handlers.js",
-                "./entity/perception.js": "/entity/perception.js",
-                "./behavior/actions.js": "/behavior/actions.js",
-                "./behavior/decision_maker.js": "/behavior/decision_maker.js",
-                "./behavior/decision_making/action_generator.js": "/behavior/decision_making/action_generator.js",
-                "./behavior/decision_making/homeless_behavior.js": "/behavior/decision_making/homeless_behavior.js",
-                "./behavior/decision_making/needs_assessor.js": "/behavior/decision_making/needs_assessor.js",
-                "./behavior/decision_making/trade_evaluator.js": "/behavior/decision_making/trade_evaluator.js",
-                "./building/building.js": "/building/building.js",
-                "./building/building_manager.js": "/building/building_manager.js",
-                "./building/building_specs.js": "/building/building_specs.js",
-                "./building/decorative_structure_manager.js": "/building/decorative_structure_manager.js",
-                "./game_logic/interaction_manager.js": "/game_logic/interaction_manager.js",
-                "./game_logic/world_event_handler.js": "/game_logic/world_event_handler.js",
-                "./constants.js": "/constants.js",
-                "./rendering/renderer.js": "/rendering/renderer.js",
-                "./rendering/asset_loader.js": "/rendering/asset_loader.js",
-                "./rendering/background_drawer.js": "/rendering/background_drawer.js",
-                "./rendering/building_drawer.js": "/rendering/building_drawer.js",
-                "./rendering/effects_drawer.js": "/rendering/effects_drawer.js",
-                "./rendering/entity_drawer.js": "/rendering/entity_drawer.js",
-                "./rendering/node_drawer.js": "/rendering/node_drawer.js",
-                "./ui/event_handler.js": "/ui/event_handler.js",
-                "./ui/panel_updater.js": "/ui/panel_updater.js",
-                "./entity/components/state.js": "/entity/components/state.js",
-                "./entity/components/resource_manager.js": "/entity/components/resource_manager.js",
-                "./entity/components/relationship_manager.js": "/entity/components/relationship_manager.js"
+                "./entity/components/inventory.js": "./entity/components/inventory.js",
+                "./entity/components/relationships.js": "./entity/components/relationships.js",
+                "./entity/components/vitals.js": "./entity/components/vitals.js",
+                "./entity/components/task.js": "./entity/components/task.js",
+                "./entity/components/movement.js": "./entity/components/movement.js",
+                "./entity/action_handlers.js": "./entity/action_handlers.js",
+                "./behavior/actions.js": "./behavior/actions.js",
+                "./building/building.js": "./building/building.js",
+                "./building/building_manager.js": "./building/building_manager.js",
+                "./building/building_specs.js": "./building/building_specs.js",
+                "./rendering/renderer.js": "./rendering/renderer.js",
+                "./rendering/asset_loader.js": "./rendering/asset_loader.js",
+                "./rendering/background_drawer.js": "./rendering/background_drawer.js",
+                "./rendering/building_drawer.js": "./rendering/building_drawer.js",
+                "./rendering/effects_drawer.js": "./rendering/effects_drawer.js",
+                "./rendering/entity_drawer.js": "./rendering/entity_drawer.js",
+                "./rendering/node_drawer.js": "./rendering/node_drawer.js"
             }
         }
     </script>
